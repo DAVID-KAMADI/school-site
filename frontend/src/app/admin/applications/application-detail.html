@@ -1,0 +1,229 @@
+<a routerLink="/admin/applications" class="a-small">← All applications</a>
+@if (app(); as a) {
+  <div class="detail-head">
+    <div>
+      <h1>{{ a.personal?.['firstName'] }} {{ a.personal?.['lastName'] }}</h1>
+      <div class="a-toolbar a-small">
+        <strong>{{ a.applicationNumber }}</strong>
+        <span class="status" [class]="'status status--' + a.status">{{ labels.STATUS_LABELS[a.status] }}</span>
+        <span class="a-muted">Submitted {{ a.submittedAt | date: 'd MMM y, HH:mm' }}</span>
+      </div>
+    </div>
+    <div class="a-toolbar">
+      @if (a.status === 'offered' || a.status === 'accepted') {
+        <a class="a-btn" [href]="letterUrl()" target="_blank" rel="noopener">Offer letter (PDF) ↗</a>
+      }
+      @for (to of a.allowedTransitions; track to) {
+        @if (allowed(to)) {
+          <button type="button" class="a-btn" [class.a-btn--success]="to === 'offered'" [class.a-btn--danger]="to === 'rejected'" [class.a-btn--primary]="to === 'under_review'" (click)="openAction(to)">
+            {{ labels.ACTION_LABELS[to] }}
+          </button>
+        }
+      }
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="a-alert a-alert--error" role="alert">{{ error() }}</div>
+  }
+  @if (notice()) {
+    <div class="a-alert a-alert--success" role="status">{{ notice() }}</div>
+  }
+
+  <div class="detail">
+    <div class="a-stack">
+      <section class="a-panel">
+        <h2>Programme</h2>
+        <dl class="dl">
+          <dt>Programme</dt><dd>{{ a.programme?.name }} <span class="a-muted">({{ a.programme?.code }})</span></dd>
+          <dt>Course area</dt><dd>{{ a.programme?.school }}</dd>
+          <dt>Intake</dt><dd>{{ a.intake?.name }}</dd>
+          <dt>Study mode</dt><dd>{{ labels.STUDY_MODE_LABELS[a.studyMode ?? ''] }}</dd>
+        </dl>
+      </section>
+
+      <div class="sections">
+        <section class="a-panel">
+          <h2>Personal details</h2>
+          <dl class="dl">
+            <dt>Full name</dt><dd>{{ val(a.personal, 'firstName') }} {{ a.personal?.['middleName'] }} {{ val(a.personal, 'lastName') }}</dd>
+            <dt>Date of birth</dt><dd>{{ val(a.personal, 'dateOfBirth') }}</dd>
+            <dt>Gender</dt><dd>{{ labels.GENDER_LABELS[val(a.personal, 'gender')] ?? '—' }}</dd>
+            <dt>Nationality</dt><dd>{{ val(a.personal, 'nationality') }}</dd>
+            <dt>{{ labels.ID_TYPE_LABELS[val(a.personal, 'idType')] ?? 'ID' }}</dt><dd>{{ val(a.personal, 'idNumber') }}</dd>
+            <dt>Phone</dt><dd>{{ val(a.personal, 'phone') }}</dd>
+            <dt>Email</dt><dd>{{ a.applicant.email }}</dd>
+            <dt>Country</dt><dd>{{ val(a.personal, 'country') }}</dd>
+            @if (a.personal?.['region']) {
+              <dt>Region or city</dt><dd>{{ val(a.personal, 'region') }}</dd>
+            } @else {
+              <dt>County</dt><dd>{{ val(a.personal, 'county') }}</dd>
+            }
+            <dt>Address</dt><dd>{{ val(a.personal, 'address') }}</dd>
+            <dt>Support needs</dt><dd>{{ val(a.personal, 'disability') }}</dd>
+          </dl>
+        </section>
+        <section class="a-panel">
+          <h2>Next of kin</h2>
+          <dl class="dl">
+            <dt>Name</dt><dd>{{ val(a.nextOfKin, 'name') }}</dd>
+            <dt>Relationship</dt><dd>{{ val(a.nextOfKin, 'relationship') }}</dd>
+            <dt>Phone</dt><dd>{{ val(a.nextOfKin, 'phone') }}</dd>
+            <dt>Email</dt><dd>{{ val(a.nextOfKin, 'email') }}</dd>
+          </dl>
+          <h2 class="funding">Funding</h2>
+          <dl class="dl">
+            <dt>Paid by</dt><dd>{{ labels.FUNDING_LABELS[val(a.funding, 'method')] ?? '—' }}</dd>
+            <dt>Sponsor</dt><dd>{{ val(a.funding, 'sponsorName') }}</dd>
+          </dl>
+        </section>
+      </div>
+
+      <section class="a-panel">
+        <h2>Education</h2>
+        <dl class="dl">
+          <dt>KCSE index</dt><dd>{{ val(a.education, 'kcseIndexNumber') }} ({{ val(a.education, 'kcseYear') }})</dd>
+          <dt>Mean grade</dt>
+          <dd>
+            {{ val(a.education, 'meanGrade') }}
+            @if (a.meetsMinimumGrade === false) {
+              <span class="warn"> · below the programme minimum of {{ a.programme?.minMeanGrade }}</span>
+            } @else if (a.programme?.minMeanGrade) {
+              <span class="a-muted"> · minimum {{ a.programme?.minMeanGrade }}</span>
+            }
+          </dd>
+          <dt>School</dt><dd>{{ val(a.education, 'secondarySchool') }}</dd>
+        </dl>
+        @if (rows(a.education, 'subjects').length) {
+          <table class="a-table subjects">
+            <thead><tr><th>Subject</th><th>Grade</th></tr></thead>
+            <tbody>
+              @for (s of rows(a.education, 'subjects'); track $index) {
+                <tr><td>{{ s['subject'] }}</td><td>{{ s['grade'] }}</td></tr>
+              }
+            </tbody>
+          </table>
+        }
+        @if (rows(a.education, 'otherQualifications').length) {
+          <h3>Other qualifications</h3>
+          <ul>
+            @for (q of rows(a.education, 'otherQualifications'); track $index) {
+              <li>{{ q['qualification'] }}, {{ q['institution'] }} ({{ q['year'] }})</li>
+            }
+          </ul>
+        }
+      </section>
+
+      <section class="a-panel">
+        <h2>History</h2>
+        <ol class="events">
+          @for (e of a.events; track e.id) {
+            <li [class.internal]="!e.visibleToApplicant">
+              <span class="a-small a-muted">{{ e.createdAt | date: 'd MMM y, HH:mm' }} · {{ e.actor ?? 'System' }} · {{ e.visibleToApplicant ? 'visible to applicant' : 'internal' }}</span>
+              @if (e.toStatus) {<div><strong>{{ labels.STATUS_LABELS[e.fromStatus ?? ''] ?? e.fromStatus }} → {{ labels.STATUS_LABELS[e.toStatus] }}</strong></div>}
+              @if (e.type === 'applicant_reply') {<div><strong>Message from applicant</strong></div>}
+              @if (e.message) {<p>{{ e.message }}</p>}
+            </li>
+          }
+        </ol>
+        @if (canReview()) {
+          <form class="a-stack note-form" (ngSubmit)="addNote()">
+            <label class="a-field"><span>Add a note or message</span><textarea class="a-textarea" name="note" maxlength="4000" [(ngModel)]="note"></textarea></label>
+            <div class="a-toolbar a-toolbar--spread">
+              <label class="a-check"><input type="checkbox" name="visible" [(ngModel)]="noteVisible" /> Send to the applicant (otherwise internal only)</label>
+              <button class="a-btn a-btn--primary" type="submit" [disabled]="!note.trim()">{{ noteVisible ? 'Send message' : 'Add internal note' }}</button>
+            </div>
+          </form>
+        }
+      </section>
+    </div>
+
+    <aside class="a-stack">
+      <section class="a-panel">
+        <h2>Application fee</h2>
+        <p><span class="a-badge" [class.a-badge--live]="a.fee.status === 'verified'" [class.a-badge--review]="a.fee.status === 'claimed'">{{ labels.FEE_LABELS[a.fee.status] }}</span></p>
+        @if (a.fee.reference) {
+          <p>M-Pesa code from applicant: <strong>{{ a.fee.reference }}</strong></p>
+        }
+        @if (a.fee.verifiedBy) {
+          <p class="a-small a-muted">Confirmed by {{ a.fee.verifiedBy }}, {{ a.fee.verifiedAt | date: 'd MMM y' }}</p>
+        }
+        @if (canReview()) {
+          @if (a.fee.status !== 'verified') {
+            <button class="a-btn a-btn--success" type="button" (click)="fee('verified')">Confirm fee received</button>
+          } @else {
+            <button class="a-btn a-btn--sm" type="button" (click)="fee('unpaid')">Undo: mark as not received</button>
+          }
+        }
+        <p class="a-small a-muted">Check the code against the M-Pesa statement before confirming.</p>
+      </section>
+
+      <section class="a-panel">
+        <h2>Documents</h2>
+        <ul class="docs">
+          @for (d of a.documents; track d.id) {
+            <li [class]="d.status">
+              <div><strong>{{ d.documentType }}</strong> <span class="a-small a-muted">{{ size(d.sizeBytes) }}</span></div>
+              <a [href]="fileUrl(d.id)" target="_blank" rel="noopener">Open {{ d.mimeType === 'application/pdf' ? 'PDF' : 'photo' }} ↗</a>
+              @if (d.status === 'rejected') {<span class="a-small a-error">Not accepted: {{ d.reviewNote }}</span>}
+              @if (d.status === 'accepted') {<span class="a-small" style="color: var(--a-success)">Accepted{{ d.reviewedBy ? ' by ' + d.reviewedBy : '' }}</span>}
+              @if (canReview()) {
+                <div class="a-toolbar">
+                  @if (d.status !== 'accepted') {<button class="a-btn a-btn--sm" type="button" (click)="acceptDoc(d)">Accept</button>}
+                  @if (d.status !== 'rejected') {<button class="a-btn a-btn--sm a-btn--danger" type="button" (click)="openReject(d)">Not accepted…</button>}
+                </div>
+              }
+            </li>
+          } @empty {
+            <li class="a-muted">No documents.</li>
+          }
+        </ul>
+      </section>
+    </aside>
+  </div>
+
+  @if (action(); as to) {
+    <div class="a-modal-backdrop" (click)="action.set(null)">
+      <form class="a-modal a-stack" role="dialog" aria-modal="true" [attr.aria-label]="labels.ACTION_LABELS[to]" (click)="$event.stopPropagation()" (ngSubmit)="confirmAction()">
+        <h2>{{ labels.ACTION_LABELS[to] }}</h2>
+        <label class="a-field">
+          <span>Message to the applicant</span>
+          <textarea class="a-textarea" name="msg" rows="6" maxlength="4000" required [(ngModel)]="actionMessage"></textarea>
+          <span class="a-help">{{ labels.MESSAGE_HINTS[to] }} The applicant sees this on their status page.</span>
+        </label>
+        @if (hasTemplate(to)) {
+          <p class="a-help">
+            Filled in from the ready-made message; check it and change anything you need.
+            <button class="a-link-btn" type="button" (click)="useTemplate(to)">Start again from the template</button>
+            · Edit the wording under Site settings → Admissions.
+          </p>
+        }
+        <div class="a-toolbar">
+          <button class="a-btn" type="submit" [class.a-btn--success]="to === 'offered'" [class.a-btn--primary]="to !== 'offered'" [disabled]="!actionMessage.trim()">Confirm</button>
+          <button class="a-btn" type="button" (click)="action.set(null)">Cancel</button>
+        </div>
+      </form>
+    </div>
+  }
+
+  @if (rejecting(); as d) {
+    <div class="a-modal-backdrop" (click)="rejecting.set(null)">
+      <form class="a-modal a-stack" role="dialog" aria-modal="true" aria-label="Document not accepted" (click)="$event.stopPropagation()" (ngSubmit)="confirmReject()">
+        <h2>{{ d.documentType }}: not accepted</h2>
+        <label class="a-field">
+          <span>Reason (shown to the applicant)</span>
+          <input class="a-input" name="reason" maxlength="500" required placeholder="e.g. The photo is blurred" [(ngModel)]="rejectNote" />
+        </label>
+        <p class="a-help">Then use “Request more information” so the applicant can upload a new file.</p>
+        <div class="a-toolbar">
+          <button class="a-btn a-btn--danger" type="submit" [disabled]="!rejectNote.trim()">Mark as not accepted</button>
+          <button class="a-btn" type="button" (click)="rejecting.set(null)">Cancel</button>
+        </div>
+      </form>
+    </div>
+  }
+} @else if (error()) {
+  <div class="a-alert a-alert--error">{{ error() }}</div>
+} @else {
+  <p class="a-muted">Loading…</p>
+}

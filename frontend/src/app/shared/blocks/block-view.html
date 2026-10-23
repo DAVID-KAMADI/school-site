@@ -1,0 +1,433 @@
+@switch (block().type) {
+  @case ('hero') {
+    <section
+      class="hero"
+      [class]="'hero--' + (c()['height'] ?? 'full')"
+      [class.hero--center]="c()['align'] === 'center'"
+      [class.hero--image]="heroSlides().length || c()['videoUrl']"
+    >
+      @if (heroSlides().length) {
+        <div class="hero__media"><app-hero-slideshow [slides]="heroSlides()" /></div>
+      }
+      <div class="container hero__inner">
+        @if (c()['eyebrow']) {
+          <p class="hero__eyebrow">{{ c()['eyebrow'] }}</p>
+        }
+        <h1 class="hero__title">{{ c()['heading'] }}</h1>
+        @if (c()['text']) {
+          <p class="hero__text">{{ c()['text'] }}</p>
+        }
+        @if (c()['buttons']?.length) {
+          <div class="button-row hero__buttons">
+            @for (b of c()['buttons']; track $index; let i = $index) {
+              <app-cms-link [link]="b" [linkClass]="i === 0 ? 'btn btn--accent btn--lg' : 'btn btn--ghost-light btn--lg'" />
+            }
+          </div>
+        }
+        @if (c()['videoUrl']) {
+          <div class="hero__video"><app-video-embed [url]="c()['videoUrl']" [title]="c()['heading']" /></div>
+        }
+      </div>
+      @if (heroSlides().length && c()['height'] === 'full') {
+        <a class="hero__scroll" href="#after-hero" aria-label="Scroll to content"><span></span></a>
+      }
+    </section>
+    <span id="after-hero"></span>
+  }
+
+  @case ('rich_text') {
+    <section class="section" [class]="background()">
+      <div class="container container--text prose" [innerHTML]="c()['html']"></div>
+    </section>
+  }
+
+  @case ('image') {
+    <section class="section">
+      <figure class="container" [class.container--text]="c()['size'] === 'content'" [class.container--full]="c()['size'] === 'full'">
+        <div class="figure-img"><app-media-image [media]="m(c()['mediaId'])" [sizes]="c()['size'] === 'content' ? '(min-width: 760px) 720px, 100vw' : '100vw'" /></div>
+        @if (c()['caption'] || m(c()['mediaId'])?.caption) {
+          <figcaption>
+            {{ c()['caption'] || m(c()['mediaId'])?.caption }}
+            @if (m(c()['mediaId'])?.credit) {
+              <span class="credit">Photo: {{ m(c()['mediaId'])?.credit }}</span>
+            }
+          </figcaption>
+        }
+      </figure>
+    </section>
+  }
+
+  @case ('image_text') {
+    <section class="section" [class]="background()">
+      <div class="container split" [class.split--reverse]="c()['imagePosition'] === 'right'">
+        <div class="split__media"><app-media-image [media]="m(c()['mediaId'])" sizes="(min-width: 900px) 50vw, 100vw" /></div>
+        <div class="split__body">
+          @if (c()['eyebrow']) {
+            <p class="eyebrow">{{ c()['eyebrow'] }}</p>
+          }
+          @if (c()['heading']) {
+            <h2 class="section-title">{{ c()['heading'] }}</h2>
+          }
+          <div class="prose" [innerHTML]="c()['html']"></div>
+          @if (c()['button']) {
+            <app-cms-link [link]="c()['button']" linkClass="btn btn--primary" />
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  @case ('gallery') {
+    <section class="section">
+      <div class="container"><app-gallery-block [heading]="c()['heading']" [items]="c()['items']" [media]="media()" /></div>
+    </section>
+  }
+
+  @case ('cards') {
+    <section class="section" [class]="background()">
+      <div class="container">
+        @if (c()['eyebrow']) {
+          <p class="eyebrow">{{ c()['eyebrow'] }}</p>
+        }
+        @if (c()['heading']) {
+          <h2 class="section-title">{{ c()['heading'] }}</h2>
+        }
+        @if (c()['intro']) {
+          <p class="section-intro">{{ c()['intro'] }}</p>
+        }
+        <ul class="card-grid" [class]="'card-grid--' + (c()['variant'] ?? 'standard')" [style.--cols]="c()['columns']">
+          @for (card of c()['items']; track $index; let i = $index) {
+            <li class="card" [class.card--static]="!card.link">
+              @if (c()['variant'] !== 'tiles') {
+                @if (m(card.mediaId); as img) {
+                  <div class="card__media"><app-media-image [media]="img" [sizes]="'(min-width: 900px) ' + (100 / (c()['columns'] || 3)) + 'vw, 100vw'" /></div>
+                }
+              }
+              <div class="card__body">
+                <!-- Card titles are h3 under a section heading, otherwise h2, so the heading outline has no gaps. -->
+                @if (c()['heading']) {
+                  <h3 class="card__title"><ng-container *ngTemplateOutlet="cardTitle; context: { $implicit: card }" /></h3>
+                } @else {
+                  <h2 class="card__title"><ng-container *ngTemplateOutlet="cardTitle; context: { $implicit: card }" /></h2>
+                }
+                @if (card.text) {
+                  <p>{{ card.text }}</p>
+                }
+                @if (card.link && c()['variant'] !== 'tiles') {
+                  <span class="card__more" aria-hidden="true">{{ card.link.label }} <span class="arrow">→</span></span>
+                }
+              </div>
+              @if (c()['variant'] === 'tiles' && card.link) {
+                <span class="tile__arrow" aria-hidden="true">→</span>
+              }
+            </li>
+          }
+        </ul>
+      </div>
+    </section>
+  }
+
+  @case ('stats') {
+    <section class="section" [class]="background()">
+      <div class="container">
+        @if (c()['eyebrow']) {
+          <p class="eyebrow">{{ c()['eyebrow'] }}</p>
+        }
+        @if (c()['heading']) {
+          <h2 class="section-title">{{ c()['heading'] }}</h2>
+        }
+        <dl class="stats">
+          @for (s of c()['items']; track $index; let i = $index) {
+            <div class="stat">
+              <dt class="stat__label">{{ s.label }}</dt>
+              <dd class="stat__value" [appCountUp]="s.value">{{ s.value }}</dd>
+              @if (s.context) {
+                <dd class="stat__context">{{ s.context }}</dd>
+              }
+            </div>
+          }
+        </dl>
+      </div>
+    </section>
+  }
+
+  @case ('timeline') {
+    <section class="section">
+      <div class="container container--text">
+        @if (c()['heading']) {
+          <h2 class="section-title">{{ c()['heading'] }}</h2>
+        }
+        <div class="timeline-track">
+          <svg class="timeline__line" viewBox="0 0 2 100" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path d="M1,0 V100" /></svg>
+          <ol class="timeline">
+            @for (t of c()['items']; track $index) {
+              <li>
+                <span class="timeline__date">{{ t.date }}</span>
+                <h3 class="timeline__title">{{ t.title }}</h3>
+                @if (t.text) {
+                  <p>{{ t.text }}</p>
+                }
+              </li>
+            }
+          </ol>
+        </div>
+      </div>
+    </section>
+  }
+
+  @case ('cta') {
+    <section class="section cta" [class]="'bg-' + c()['background']">
+      <div class="container cta__inner">
+        <div>
+          <h2 class="cta__title">{{ c()['heading'] }}</h2>
+          @if (c()['text']) {
+            <p>{{ c()['text'] }}</p>
+          }
+        </div>
+        <div class="button-row">
+          @for (b of c()['buttons']; track $index; let i = $index) {
+            <app-cms-link [link]="b" [linkClass]="i === 0 ? 'btn btn--lg ' + (c()['background'] === 'light' ? 'btn--primary' : c()['background'] === 'dark' ? 'btn--accent' : 'btn--light') : 'btn btn--lg btn--ghost-light'" />
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  @case ('faq') {
+    <section class="section">
+      <div class="container container--text">
+        @if (c()['heading']) {
+          <h2 class="section-title">{{ c()['heading'] }}</h2>
+        }
+        <div class="faq">
+          @for (q of c()['items']; track $index) {
+            <details class="faq__item">
+              <summary>{{ q.question }}</summary>
+              <div class="prose" [innerHTML]="q.answerHtml"></div>
+            </details>
+          }
+        </div>
+      </div>
+    </section>
+  }
+
+  @case ('tabs') {
+    <section class="section">
+      <div class="container container--text"><app-tabs-block [items]="c()['items']" /></div>
+    </section>
+  }
+
+  @case ('testimonial') {
+    <section class="section bg-light">
+      <figure class="container container--text quote">
+        @if (m(c()['mediaId']); as img) {
+          <div class="quote__photo"><app-media-image [media]="img" sizes="120px" /></div>
+        }
+        <blockquote>“{{ c()['quote'] }}”</blockquote>
+        <figcaption><strong>{{ c()['name'] }}</strong>@if (c()['role']) {<span>, {{ c()['role'] }}</span>}</figcaption>
+      </figure>
+    </section>
+  }
+
+  @case ('video') {
+    @let pos = c()['videoPosition'] ?? 'center';
+    @let videoName = c()['title'] || c()['heading'] || 'Video';
+    <section class="section" [class]="background()">
+      @if (pos === 'center') {
+        <div class="container container--text">
+          @if (c()['eyebrow']) {
+            <p class="eyebrow">{{ c()['eyebrow'] }}</p>
+          }
+          @if (c()['heading']) {
+            <h2 class="section-title">{{ c()['heading'] }}</h2>
+          }
+          @if (c()['html']) {
+            <div class="prose video-intro" [innerHTML]="c()['html']"></div>
+          }
+          <figure class="video-figure">
+            <app-video-embed [url]="c()['url']" [title]="videoName" />
+            @if (c()['caption']) {
+              <figcaption>{{ c()['caption'] }}</figcaption>
+            }
+          </figure>
+          @if (c()['button']) {
+            <app-cms-link [link]="c()['button']" linkClass="btn btn--primary" />
+          }
+        </div>
+      } @else {
+        <div class="container split" [class.split--reverse]="pos === 'right'">
+          <figure class="split__video video-figure">
+            <app-video-embed [url]="c()['url']" [title]="videoName" />
+            @if (c()['caption']) {
+              <figcaption>{{ c()['caption'] }}</figcaption>
+            }
+          </figure>
+          <div class="split__body">
+            @if (c()['eyebrow']) {
+              <p class="eyebrow">{{ c()['eyebrow'] }}</p>
+            }
+            @if (c()['heading']) {
+              <h2 class="section-title">{{ c()['heading'] }}</h2>
+            }
+            @if (c()['html']) {
+              <div class="prose" [innerHTML]="c()['html']"></div>
+            }
+            @if (c()['button']) {
+              <app-cms-link [link]="c()['button']" linkClass="btn btn--primary" />
+            }
+          </div>
+        </div>
+      }
+    </section>
+  }
+
+  @case ('map') {
+    <section class="section">
+      <div class="container">
+        @if (c()['label']) {
+          <h2 class="section-title">{{ c()['label'] }}</h2>
+        }
+        <iframe class="map" [src]="mapUrl()" [title]="'Map: ' + (c()['label'] || 'campus location')" loading="lazy"></iframe>
+        <p class="map__link">
+          <a [href]="'https://www.openstreetmap.org/?mlat=' + c()['lat'] + '&mlon=' + c()['lng'] + '#map=17/' + c()['lat'] + '/' + c()['lng']" target="_blank" rel="noopener noreferrer">Open larger map<span class="visually-hidden"> (opens in a new tab)</span></a>
+        </p>
+      </div>
+    </section>
+  }
+
+  @case ('downloads') {
+    <section class="section">
+      <div class="container container--text">
+        @if (c()['heading']) {
+          <h2 class="section-title">{{ c()['heading'] }}</h2>
+        }
+        <ul class="downloads">
+          @for (d of c()['items']; track $index) {
+            @if (m(d.mediaId); as file) {
+              <li>
+                <a [href]="file.url" download>
+                  <span class="downloads__type">{{ fileType(file.mimeType, file.originalName) }}</span>
+                  <span class="downloads__title">{{ d.title }}</span>
+                  <span class="downloads__size">{{ fileSize(file.sizeBytes) }}</span>
+                </a>
+              </li>
+            }
+          }
+        </ul>
+      </div>
+    </section>
+  }
+
+  @case ('contact_form') {
+    <section class="section bg-light">
+      <div class="container container--text">
+        @if (c()['heading']) {
+          <h2 class="section-title">{{ c()['heading'] }}</h2>
+        }
+        @if (c()['intro']) {
+          <p class="section-intro">{{ c()['intro'] }}</p>
+        }
+        <ul class="contact-list">
+          @for (l of contactLinks(); track l.href) {
+            <li><span class="contact-list__kind">{{ l.kind }}</span> <a [href]="l.href">{{ l.label }}</a></li>
+          }
+          @if (site.setting('contact.address')) {
+            <li><span class="contact-list__kind">Address</span> {{ site.setting('contact.address') }}</li>
+          }
+          @if (site.setting('contact.office_hours')) {
+            <li><span class="contact-list__kind">Office hours</span> {{ site.setting('contact.office_hours') }}</li>
+          }
+        </ul>
+      </div>
+    </section>
+  }
+
+  @case ('programmes') {
+    <section class="section" [class]="background()">
+      <div class="container">
+        @if (c()['eyebrow']) {
+          <p class="eyebrow">{{ c()['eyebrow'] }}</p>
+        }
+        @if (c()['heading']) {
+          <h2 class="section-title">{{ c()['heading'] }}</h2>
+        }
+        @if (c()['intro']) {
+          <p class="section-intro">{{ c()['intro'] }}</p>
+        }
+        <app-programmes-block [programmes]="c()['programmes'] ?? []" [shortCourses]="c()['shortCourses'] ?? []" [enquiryLink]="c()['enquiryLink']" [media]="media()" />
+      </div>
+    </section>
+  }
+
+  @case ('short_courses') {
+    <section class="section" [class]="background()">
+      <div class="container">
+        @if (c()['eyebrow']) {
+          <p class="eyebrow">{{ c()['eyebrow'] }}</p>
+        }
+        @if (c()['heading']) {
+          <h2 class="section-title">{{ c()['heading'] }}</h2>
+        }
+        @if (c()['intro']) {
+          <p class="section-intro">{{ c()['intro'] }}</p>
+        }
+        <ul class="course-grid">
+          @for (course of c()['items'] ?? []; track course.id) {
+            <li><app-short-course-card [course]="course" [image]="m(course.imageId)" [enquiryLink]="c()['enquiryLink']" /></li>
+          } @empty {
+            <li class="course-grid__empty">{{ site.t('courses.none', 'New short courses will be listed here soon.') }}</li>
+          }
+        </ul>
+      </div>
+    </section>
+  }
+
+  @case ('child_pages') {
+    <section class="section">
+      <div class="container">
+        @if (c()['heading']) {
+          <h2 class="section-title">{{ c()['heading'] }}</h2>
+        }
+        @if (c()['style'] === 'list') {
+          <ul class="link-list">
+            @for (p of c()['items']; track p.path) {
+              <li><a [routerLink]="p.path">{{ p.title }}</a>@if (p.summary) {<span> {{ p.summary }}</span>}</li>
+            }
+          </ul>
+        } @else {
+          <ul class="card-grid" style="--cols: 3">
+            @for (p of c()['items']; track p.path) {
+              <li class="card">
+                @if (m(p.mediaId); as img) {
+                  <div class="card__media"><app-media-image [media]="img" sizes="(min-width: 900px) 33vw, 100vw" /></div>
+                }
+                <div class="card__body">
+                  <h3 class="card__title"><a class="card__link" [routerLink]="p.path">{{ p.title }}</a></h3>
+                  @if (p.summary) {
+                    <p>{{ p.summary }}</p>
+                  }
+                </div>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    </section>
+  }
+
+  @case ('divider') {
+    <div class="container"><hr class="divider" /></div>
+  }
+
+  @case ('spacer') {
+    <div [class]="'spacer spacer--' + c()['size']" aria-hidden="true"></div>
+  }
+}
+
+<ng-template #cardTitle let-card>
+  @if (card.link) {
+    <app-cms-link [link]="card.link" [text]="card.title" linkClass="card__link" />
+  } @else {
+    {{ card.title }}
+  }
+</ng-template>

@@ -1,0 +1,405 @@
+@if (board(); as b) {
+  <div class="head">
+    <a routerLink="/admin/timetable" class="a-small">← Timetable</a>
+    <div class="a-toolbar a-toolbar--spread">
+      <div>
+        <h1>{{ b.term.name }}</h1>
+        <div class="a-toolbar a-small">
+          <span class="a-muted">{{ b.term.startsOn | date: 'd MMM y' }} – {{ b.term.endsOn | date: 'd MMM y' }}</span>
+          @if (b.term.status === 'published') {
+            <span class="a-badge a-badge--live">Published</span>
+          } @else {
+            <span class="a-badge">Draft</span>
+          }
+          <span class="a-badge" [class.a-badge--changes]="placedCount() < b.sessions.length">{{ placedCount() }} / {{ b.sessions.length }} sessions placed</span>
+          @if (issues().length) {
+            <span class="a-badge a-badge--review">{{ issues().length }} problem(s)</span>
+          }
+        </div>
+      </div>
+      <div class="a-toolbar">
+        @if (b.term.status === 'published') {
+          <a class="a-btn" href="/timetable" target="_blank" rel="noopener">View on website</a>
+          <button class="a-btn" type="button" (click)="publish(false)">Unpublish</button>
+        } @else {
+          <button class="a-btn a-btn--success" type="button" (click)="publish(true)">Publish</button>
+        }
+      </div>
+    </div>
+  </div>
+
+  @if (message(); as m) {
+    <div class="a-alert" [class]="'a-alert--' + m.kind" role="status">
+      {{ m.text }}
+      @if (m.list?.length) {
+        <ul>
+          @for (item of m.list; track $index) {
+            <li>{{ item }}</li>
+          }
+        </ul>
+      }
+    </div>
+  }
+
+  <div class="tabs" role="tablist">
+    <button role="tab" type="button" [attr.aria-selected]="tab() === 'timetable'" (click)="tab.set('timetable')">Timetable</button>
+    <button role="tab" type="button" [attr.aria-selected]="tab() === 'lessons'" (click)="tab.set('lessons')">Lessons <span class="a-muted">{{ b.lessons.length }}</span></button>
+    <button role="tab" type="button" [attr.aria-selected]="tab() === 'periods'" (click)="tab.set('periods')">Days &amp; periods</button>
+    <button role="tab" type="button" [attr.aria-selected]="tab() === 'details'" (click)="tab.set('details')">Term details</button>
+  </div>
+
+  @switch (tab()) {
+    <!-- ======================================================= TIMETABLE -->
+    @case ('timetable') {
+      @if (!b.lessons.length) {
+        <div class="a-panel a-empty">
+          No lessons yet. Add the lessons for this term first (unit, class, lecturer and sessions per week).
+          <div><button class="a-btn a-btn--primary" type="button" (click)="tab.set('lessons'); newLesson()">+ Add a lesson</button></div>
+        </div>
+      } @else {
+        <div class="a-panel controls">
+          <div class="a-toolbar a-toolbar--spread">
+            <div class="a-toolbar">
+              <div class="seg" role="group" aria-label="View by">
+                <button type="button" class="a-btn a-btn--sm" [class.a-btn--primary]="viewKind() === 'class'" (click)="setView('class')">Class</button>
+                <button type="button" class="a-btn a-btn--sm" [class.a-btn--primary]="viewKind() === 'lecturer'" (click)="setView('lecturer')">Lecturer</button>
+                <button type="button" class="a-btn a-btn--sm" [class.a-btn--primary]="viewKind() === 'room'" (click)="setView('room')">Room</button>
+              </div>
+              <select class="a-select view" [ngModel]="viewId()" (ngModelChange)="viewId.set($event); pending.set(null)" aria-label="Show">
+                @for (c of viewChoices(); track c.id) {
+                  <option [ngValue]="c.id">{{ c.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="a-toolbar">
+              <button class="a-btn a-btn--primary" type="button" (click)="generate(false)" [disabled]="busy()">Fill empty slots automatically</button>
+              <button class="a-btn" type="button" (click)="generate(true)" [disabled]="busy()">Rebuild all</button>
+            </div>
+          </div>
+          <p class="a-help">
+            Click a session to move it: free slots turn green, amber means allowed but the unit already meets that day, and a blocked slot
+            explains why when you point at it. Locked sessions stay put when the timetable is filled or rebuilt.
+          </p>
+        </div>
+
+        @if (loads().length) {
+          <div class="a-alert a-alert--warning">
+            Some weekly loads cannot fit in {{ teachingPeriods() * b.term.days.length }} teaching periods:
+            <ul>
+              @for (l of loads(); track l.name) {
+                <li>{{ l.name }}: {{ l.needed }} periods needed{{ l.limit !== null && l.limit < l.capacity ? ' (daily limit allows ' + l.limit + ')' : '' }}</li>
+              }
+            </ul>
+          </div>
+        }
+        @if (issues().length) {
+          <div class="a-alert a-alert--error">
+            These placed sessions break a rule after rooms, lecturers or classes were edited. Move them or fix the details:
+            <ul>
+              @for (i of issues(); track i.sessionId) {
+                <li>{{ issueTitle(i.sessionId) }}: {{ i.problems.join(' ') }}</li>
+              }
+            </ul>
+          </div>
+        }
+
+        <div class="board">
+          <div class="grid-wrap">
+            <table class="grid" [class.grid--selecting]="selected() !== null">
+              <thead>
+                <tr>
+                  <th scope="col" class="time">Time</th>
+                  @for (d of b.term.days; track d) {
+                    <th scope="col">{{ dayNames[d] }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of grid(); track row.period.id) {
+                  @if (row.period.isBreak) {
+                    <tr class="break">
+                      <th scope="row" class="time">{{ periodTime(row.period) }}</th>
+                      <td [attr.colspan]="b.term.days.length">{{ row.period.label || 'Break' }}</td>
+                    </tr>
+                  } @else {
+                    <tr>
+                      <th scope="row" class="time">{{ periodTime(row.period) }}</th>
+                      @for (cell of row.cells; track $index) {
+                        @switch (cell.kind) {
+                          @case ('item') {
+                            <td [attr.rowspan]="$any(cell).rowspan" class="has-item">
+                              @let s = $any(cell).item.data;
+                              <button
+                                type="button"
+                                class="card"
+                                [class.card--selected]="selected() === s.id"
+                                [class.card--locked]="s.locked"
+                                [title]="sessionTitle(s)"
+                                (click)="select(s)"
+                              >
+                                <strong>{{ unitCode(lessonOf(s)) }}</strong>
+                                @for (line of cardDetail(s); track $index) {
+                                  <span>{{ line }}</span>
+                                }
+                                @if (s.locked) {
+                                  <span class="lock" aria-label="Locked">🔒</span>
+                                }
+                              </button>
+                            </td>
+                          }
+                          @case ('empty') {
+                            @let e = $any(cell);
+                            <td class="empty" [class]="'empty empty--' + (cellState(e.day, e.periodId) ?? 'idle')" [class.pending]="pending()?.day === e.day && pending()?.periodId === e.periodId">
+                              @if (selected() !== null) {
+                                <button type="button" class="slot" [title]="cellHint(e.day, e.periodId)" [attr.aria-label]="dayNames[e.day] + ' ' + periodTime(row.period) + ': ' + cellHint(e.day, e.periodId)" (click)="chooseCell(e.day, e.periodId)">
+                                  {{ cellState(e.day, e.periodId) === 'blocked' ? '' : 'Place here' }}
+                                </button>
+                              }
+                            </td>
+                          }
+                        }
+                      }
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+
+          <aside class="side">
+            @if (selected() !== null) {
+              @let s = selectedSession();
+              @if (s) {
+                <section class="a-panel a-stack">
+                  <h2>Selected</h2>
+                  <div>
+                    <strong>{{ unitLabel(lessonOf(s)) }}</strong>
+                    <div class="a-small">{{ classNames(lessonOf(s)) }}</div>
+                    <div class="a-small">{{ lecturerName(lessonOf(s).lecturerId) }} · {{ lessonOf(s).length }} period(s)</div>
+                    @if (s.day !== null) {
+                      <div class="a-small a-muted">Now: {{ dayNames[s.day] }}, {{ roomName(s.roomId) }}</div>
+                    }
+                  </div>
+                  @if (pending(); as p) {
+                    <div class="a-stack place-box">
+                      <div><strong>{{ dayNames[p.day] }}</strong>, {{ periodTimeById(p.periodId) }}</div>
+                      <label class="a-field">
+                        <span>Room</span>
+                        <select class="a-select" [ngModel]="p.roomId" (ngModelChange)="pending.set({ ...p, roomId: $event })">
+                          @for (r of p.roomIds; track r) {
+                            <option [ngValue]="r">{{ roomName(r) }}</option>
+                          }
+                        </select>
+                      </label>
+                      @for (w of p.warnings; track $index) {
+                        <div class="a-small warn-text">{{ w }}</div>
+                      }
+                      <div class="a-toolbar">
+                        <button class="a-btn a-btn--primary a-btn--sm" type="button" (click)="confirmPlace()" [disabled]="busy()">Place</button>
+                        <button class="a-btn a-btn--sm" type="button" (click)="pending.set(null)">Cancel</button>
+                      </div>
+                    </div>
+                  } @else {
+                    <p class="a-small a-muted">Choose a green slot in the grid.</p>
+                  }
+                  <div class="a-toolbar">
+                    <button class="a-btn a-btn--sm" type="button" (click)="toggleLock(s)">{{ s.locked ? 'Unlock' : 'Lock in place' }}</button>
+                    @if (s.day !== null) {
+                      <button class="a-btn a-btn--sm a-btn--danger" type="button" (click)="unplace(s)">Take off timetable</button>
+                    }
+                    <button class="a-btn a-btn--sm" type="button" (click)="clearSelection()">Done</button>
+                  </div>
+                </section>
+              }
+            }
+            <section class="a-panel">
+              <h2>Not placed <span class="a-muted">{{ unplaced().length }}</span></h2>
+              @if (unplaced().length) {
+                <ul class="tray">
+                  @for (s of unplaced(); track s.id) {
+                    <li>
+                      <button type="button" class="card card--tray" [class.card--selected]="selected() === s.id" (click)="select(s)" [title]="sessionTitle(s)">
+                        <strong>{{ unitCode(lessonOf(s)) }}</strong>
+                        <span>{{ classNames(lessonOf(s)) }}</span>
+                        <span>{{ lecturerName(lessonOf(s).lecturerId) }}{{ lessonOf(s).length > 1 ? ' · ' + lessonOf(s).length + ' periods' : '' }}</span>
+                      </button>
+                    </li>
+                  }
+                </ul>
+              } @else {
+                <p class="a-small a-muted">Everything here is on the timetable.</p>
+              }
+            </section>
+          </aside>
+        </div>
+      }
+    }
+
+    <!-- ======================================================= LESSONS -->
+    @case ('lessons') {
+      <section class="a-panel">
+        <div class="a-toolbar a-toolbar--spread">
+          <h2>Lessons this term</h2>
+          <button class="a-btn a-btn--primary" type="button" (click)="newLesson()">+ Add a lesson</button>
+        </div>
+        <p class="a-help">A lesson is a unit taught to one or more classes (combined classes sit together) by one lecturer, a number of times each week.</p>
+        <div class="a-table-wrap">
+          <table class="a-table">
+            <thead><tr><th>Unit</th><th>Class(es)</th><th>Lecturer</th><th>Per week</th><th>Room</th><th>Placed</th><th></th></tr></thead>
+            <tbody>
+              @for (l of b.lessons; track l.id) {
+                <tr>
+                  <td><strong>{{ unitLabel(l) }}</strong>@if (l.notes) {<div class="a-small a-muted">{{ l.notes }}</div>}</td>
+                  <td>{{ classNames(l) }}</td>
+                  <td>{{ lecturerName(l.lecturerId) }}</td>
+                  <td>{{ l.sessionsPerWeek }} × {{ l.length === 1 ? '1 period' : l.length + ' periods' }}</td>
+                  <td>{{ l.effectiveRoomType ? roomTypes[l.effectiveRoomType] : 'Classroom' }}</td>
+                  <td [class.short]="placedOf(l) < l.sessionsPerWeek">{{ placedOf(l) }} / {{ l.sessionsPerWeek }}</td>
+                  <td class="tools">
+                    <button class="a-btn a-btn--sm" type="button" (click)="editLesson(l)">Edit</button>
+                    <button class="a-btn a-btn--sm a-btn--danger" type="button" (click)="deleteLesson(l)">Delete</button>
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="7" class="a-empty">No lessons yet.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    }
+
+    <!-- ======================================================= PERIODS -->
+    @case ('periods') {
+      <section class="a-panel a-stack">
+        <h2>The teaching day</h2>
+        <p class="a-help">
+          Periods in order through the day. Mark tea and lunch as breaks: nothing is scheduled in a break, and a double lesson never runs
+          across one. Sessions that no longer fit after a change are taken off the timetable and listed.
+        </p>
+        <div class="a-table-wrap">
+          <table class="a-table periods">
+            <thead><tr><th>#</th><th>Starts</th><th>Ends</th><th>Break</th><th>Name (optional)</th><th></th></tr></thead>
+            <tbody>
+              @for (p of periodRows; track $index; let i = $index; let first = $first; let last = $last) {
+                <tr [class.break-row]="p.isBreak">
+                  <td>{{ i + 1 }}</td>
+                  <td><input class="a-input" type="time" [(ngModel)]="p.startsAt" [attr.aria-label]="'Period ' + (i + 1) + ' starts'" /></td>
+                  <td><input class="a-input" type="time" [(ngModel)]="p.endsAt" [attr.aria-label]="'Period ' + (i + 1) + ' ends'" /></td>
+                  <td><input type="checkbox" [(ngModel)]="p.isBreak" [attr.aria-label]="'Period ' + (i + 1) + ' is a break'" /></td>
+                  <td><input class="a-input" [(ngModel)]="p.label" maxlength="50" [placeholder]="p.isBreak ? 'e.g. Lunch' : ''" [attr.aria-label]="'Period ' + (i + 1) + ' name'" /></td>
+                  <td class="tools">
+                    <button class="a-btn a-btn--sm a-btn--icon" type="button" [disabled]="first" (click)="movePeriod(i, -1)" aria-label="Move up">↑</button>
+                    <button class="a-btn a-btn--sm a-btn--icon" type="button" [disabled]="last" (click)="movePeriod(i, 1)" aria-label="Move down">↓</button>
+                    <button class="a-btn a-btn--sm a-btn--danger" type="button" (click)="periodRows.splice(i, 1)">Remove</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <div class="a-toolbar">
+          <button class="a-btn" type="button" (click)="addPeriod()">+ Add a period</button>
+          <button class="a-btn a-btn--primary" type="button" (click)="savePeriods()" [disabled]="busy()">Save periods</button>
+        </div>
+      </section>
+    }
+
+    <!-- ======================================================= DETAILS -->
+    @case ('details') {
+      <section class="a-panel a-stack">
+        <h2>Term details</h2>
+        <label class="a-field"><span>Name</span><input class="a-input" [(ngModel)]="details.name" maxlength="150" /></label>
+        <div class="a-row">
+          <label class="a-field"><span>Starts</span><input class="a-input" type="date" [(ngModel)]="details.startsOn" /></label>
+          <label class="a-field"><span>Ends</span><input class="a-input" type="date" [(ngModel)]="details.endsOn" /></label>
+        </div>
+        <fieldset class="days">
+          <legend class="a-label">Teaching days</legend>
+          @for (d of allDays; track d) {
+            <label class="a-check"><input type="checkbox" [ngModel]="details.days.includes(d)" (ngModelChange)="toggleDay(d, $event)" /> {{ dayNames[d] }}</label>
+          }
+        </fieldset>
+        <div class="a-toolbar">
+          <button class="a-btn a-btn--primary" type="button" (click)="saveDetails()">Save</button>
+          @if (b.term.status === 'draft') {
+            <button class="a-btn a-btn--danger" type="button" (click)="deleteTerm()">Delete term</button>
+          }
+        </div>
+      </section>
+    }
+  }
+
+  @if (lessonForm(); as f) {
+    <div class="a-modal-backdrop" (click)="lessonForm.set(null)">
+      <form class="a-modal a-stack" role="dialog" aria-modal="true" aria-label="Lesson" (click)="$event.stopPropagation()" (ngSubmit)="saveLesson()">
+        <h2>{{ f.id ? 'Edit lesson' : 'New lesson' }}</h2>
+        @if (formError()) {
+          <div class="a-alert a-alert--error" role="alert">{{ formError() }}</div>
+        }
+        <label class="a-field">
+          <span>Unit</span>
+          <select class="a-select" name="unit" required [(ngModel)]="f.unitId">
+            <option [ngValue]="null" disabled>Choose…</option>
+            @for (u of b.units; track u.id) {
+              @if (u.isActive || u.id === f.unitId) {
+                <option [ngValue]="u.id">{{ u.code }} {{ u.name }}</option>
+              }
+            }
+          </select>
+        </label>
+        <label class="a-field">
+          <span>Lecturer</span>
+          <select class="a-select" name="lecturer" required [(ngModel)]="f.lecturerId">
+            <option [ngValue]="null" disabled>Choose…</option>
+            @for (l of b.lecturers; track l.id) {
+              @if (l.isActive || l.id === f.lecturerId) {
+                <option [ngValue]="l.id">{{ l.name }}</option>
+              }
+            }
+          </select>
+        </label>
+        <fieldset class="classes">
+          <legend class="a-label">Class(es) — tick more than one for a combined lesson</legend>
+          @for (c of b.classes; track c.id) {
+            @if (c.isActive || f.classIds.includes(c.id)) {
+              <label class="a-check"><input type="checkbox" [name]="'c' + c.id" [ngModel]="f.classIds.includes(c.id)" (ngModelChange)="toggleClass(f, c.id, $event)" /> {{ c.name }} <span class="a-muted">({{ c.size }})</span></label>
+            }
+          }
+        </fieldset>
+        <div class="a-row">
+          <label class="a-field"><span>Sessions per week</span><input class="a-input" type="number" min="1" max="15" name="spw" required [(ngModel)]="f.sessionsPerWeek" /></label>
+          <label class="a-field">
+            <span>Each session</span>
+            <select class="a-select" name="length" [(ngModel)]="f.length">
+              <option [ngValue]="1">1 period</option>
+              <option [ngValue]="2">2 periods (double)</option>
+              <option [ngValue]="3">3 periods</option>
+              <option [ngValue]="4">4 periods</option>
+            </select>
+          </label>
+        </div>
+        <label class="a-field">
+          <span>Room</span>
+          <select class="a-select" name="roomType" [(ngModel)]="f.roomType">
+            <option [ngValue]="null">As the unit needs</option>
+            @for (k of roomTypeKeys; track k) {
+              <option [ngValue]="k">{{ roomTypes[k] }}</option>
+            }
+          </select>
+        </label>
+        <label class="a-field"><span>Notes</span><input class="a-input" name="notes" maxlength="300" [(ngModel)]="f.notes" /></label>
+        <div class="a-toolbar">
+          <button class="a-btn a-btn--primary" type="submit">Save</button>
+          <button class="a-btn" type="button" (click)="lessonForm.set(null)">Cancel</button>
+        </div>
+      </form>
+    </div>
+  }
+} @else {
+  @if (message(); as m) {
+    <div class="a-alert a-alert--error">{{ m.text }}</div>
+  } @else {
+    <p class="a-muted">Loading…</p>
+  }
+}

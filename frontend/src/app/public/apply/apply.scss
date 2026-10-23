@@ -1,0 +1,57 @@
+/* Applicant portal styles (shared by the Apply page, the form and the status page). */
+
+.apply-hero { background: var(--primary); color: #fff; padding-block: clamp(2.5rem, 6vw, 4rem); }
+.apply-hero h1 { color: #fff; margin: 0; animation: rise-in 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.apply-hero .hero__eyebrow { color: var(--on-accent); background: var(--accent); padding: 0.35rem 0.8rem; border-radius: 999px; }
+.apply-hero .hero__eyebrow::before { display: none; }
+.apply-hero__text { color: rgb(255 255 255 / 0.9); max-width: 60ch; margin: 1rem 0 0; font-size: 1.1rem; }
+.muted { color: var(--muted); }
+
+.apply-landing { display: grid; gap: 2.5rem; align-items: start; }
+@media (min-width: 900px) { .apply-landing { grid-template-columns: 1.2fr 1fr; } }
+.checklist { list-style: none; padding: 0; margin: 0 0 1.5rem; display: grid; gap: 0.6rem; }
+.checklist li { padding-left: 1.9rem; position: relative; }
+.checklist li::before { content: '✓'; position: absolute; left: 0; top: 0.05rem; width: 1.3rem; height: 1.3rem; border-radius: 50%; background: var(--surface-3); color: var(--action); display: grid; place-items: center; font-size: 0.8rem; font-weight: 700; }
+.fee-note { border-left: 4px solid var(--accent); background: var(--surface-2); padding: 1rem 1.25rem; border-radius: var(--radius-sm); }
+.fee-note p { margin: 0.25rem 0 0; color: var(--muted); }
+.intakes-title { margin-top: 2rem; }
+.intakes { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.6rem; }
+.intakes li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; padding: 0.9rem 1.1rem; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+
+.auth-card { background: var(--surface); border: 1px solid var(--line); border-top: 4px solid var(--action); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow); }
+.auth-tabs { display: flex; gap: 0.25rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--line); }
+.auth-tabs button { flex: 1; padding: 0.7rem; border: 0; background: none; font: inherit; font-weight: 600; color: var(--muted); border-bottom: 3px solid transparent; cursor: pointer; }
+.auth-tabs button[aria-selected='true'] { color: var(--action); border-bottom-color: var(--accent); }
+
+/* Form controls */
+.form-stack { display: grid; gap: 1rem; }
+.form-grid { display: grid; gap: 1rem 1.25rem; }
+@media (min-width: 700px) { .form-grid { grid-template-columns: 1fr 1fr; } .form-grid .field--wide { grid-column: 1 / -1; } }
+.field { display: grid; gap: 0.35rem; }
+.field > span, .field-label { font-weight: 600; color: var(--ink); font-size: 0.95rem; }
+.field input:not([type='radio']):not([type='checkbox']), .field select, .field textarea {
+  width: 100%; padding: 0.7rem 0.85rem; border: 1px solid #c4ccd8; border-radius: var(--radius-sm); font: inherit; color: var(--ink); background: #fff;
+}
+.field textarea { min-height: 6rem; resize: vertical; }
+.field input:focus, .field select:focus, .field textarea:focus { outline: 3px solid rgb(3 69 191 / 0.25); border-color: var(--action); }
+.field--error input:not([type='radio']), .field--error select { border-color: var(--danger); }
+.field small { font-size: 0.85rem; }
+.field-error { color: var(--danger); font-size: 0.88rem; margin: 0; }
+.form-error { color: #7a1a12; background: #fdf0ef; border: 1px solid #f2c4bf; padding: 0.75rem 1rem; border-radius: var(--radius-sm); }
+.form-success { color: #0d5530; background: #ecf8f1; border: 1px solid #b9e2c9; padding: 0.75rem 1rem; border-radius: var(--radius-sm); }
+.form-warning { color: #6b3e00; background: #fff7e8; border: 1px solid #f2d49b; padding: 0.75rem 1rem; border-radius: var(--radius-sm); }
+.btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* Choice cards (intakes, study modes, funding) */
+.choices { display: grid; gap: 0.6rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); }
+.choice { position: relative; display: flex; gap: 0.6rem; align-items: flex-start; padding: 0.9rem 1rem; border: 1px solid #c4ccd8; border-radius: var(--radius-sm); cursor: pointer; background: #fff; }
+.choice:has(input:checked) { border-color: var(--action); background: #eef3fd; box-shadow: inset 0 0 0 1px var(--action); }
+.choice input { flex: none; width: 1.1rem; height: 1.1rem; margin: 0.15rem 0 0; accent-color: var(--action); }
+.choice > span { display: grid; gap: 0.1rem; }
+.choice small { display: block; color: var(--muted); }
+
+/* Terms and privacy consent on the create-account form */
+.consent { display: flex; gap: 0.7rem; align-items: flex-start; font-size: 0.95rem; line-height: 1.5; cursor: pointer; }
+.consent input { flex: none; width: 1.25rem; height: 1.25rem; margin-top: 0.15rem; accent-color: var(--action); }
+.consent a { font-weight: 600; }
+.consent__minor { display: block; margin-top: 0.35rem; }

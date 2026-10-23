@@ -1,0 +1,14 @@
+:host { display: grid; gap: 0.85rem; }
+.field--error .a-input, .field--error .a-textarea { border-color: var(--a-danger); }
+.req { color: var(--a-danger); }
+.group { border: 1px solid var(--a-line); border-radius: 8px; padding: 0.75rem; margin: 0; display: grid; gap: 0.6rem; }
+.group legend { font-weight: 700; font-size: 0.88rem; padding: 0 0.3rem; }
+.items { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+.item { border: 1px solid var(--a-line); border-radius: 7px; background: #fafbfc; }
+.item--error { border-color: var(--a-danger); }
+.item__head { display: flex; gap: 0.3rem; align-items: center; padding: 0.3rem; }
+.item__toggle { flex: 1; text-align: left; background: none; border: 0; font: inherit; font-weight: 600; padding: 0.35rem 0.4rem; cursor: pointer; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item__toggle::before { content: '▸ '; color: var(--a-muted); }
+.item__toggle[aria-expanded='true']::before { content: '▾ '; }
+.item__body { padding: 0.5rem 0.75rem 0.85rem; border-top: 1px solid var(--a-line); background: #fff; border-radius: 0 0 7px 7px; }
+.media-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }

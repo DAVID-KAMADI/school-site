@@ -1,0 +1,140 @@
+/* Admin portal styles. Loaded only inside /admin (see admin-root.ts). Same brand colours as the public site. */
+
+.admin {
+  --a-bg: #f3f5fa;
+  --a-panel: #ffffff;
+  --a-line: #e3e7ef;
+  --a-line-strong: #c9d1dd;
+  --a-text: #18202b;
+  --a-muted: #5b6676;
+  --a-navy: #001a5c;
+  --a-navy-2: #0033a0;
+  --a-primary: #0345bf;
+  --a-primary-strong: #0033a0;
+  --a-primary-soft: #e9f0fd;
+  --a-accent: #ef6d00;
+  --a-accent-soft: #fff1e4;
+  --a-accent-text: #a84a00;
+  --a-danger: #b42318;
+  --a-danger-soft: #fdf0ef;
+  --a-success: #12733f;
+  --a-success-soft: #e6f6ec;
+  --a-warning: #9a4f00;
+  --a-warning-soft: #fff4dc;
+  --a-radius: 14px;
+  --a-radius-sm: 9px;
+  --a-shadow: 0 1px 2px rgb(16 24 40 / 0.05), 0 4px 14px rgb(16 24 40 / 0.05);
+  --a-shadow-lg: 0 2px 4px rgb(16 24 40 / 0.06), 0 16px 40px rgb(16 24 40 / 0.12);
+  --a-ring: 0 0 0 3px rgb(3 69 191 / 0.2);
+  font-family: var(--font);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--a-text);
+  background: var(--a-bg);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.admin h1 { font-size: 1.65rem; font-weight: 700; letter-spacing: -0.015em; margin: 0 0 1rem; line-height: 1.2; }
+.admin h2 { font-size: 1.12rem; font-weight: 650; margin: 0 0 0.75rem; letter-spacing: -0.005em; }
+.admin h3 { font-size: 1rem; font-weight: 650; margin: 0 0 0.5rem; }
+:where(.admin) a { color: var(--a-primary); text-underline-offset: 2px; }
+.admin :focus-visible { outline: 2px solid var(--a-primary); outline-offset: 2px; }
+.admin ::selection { background: #cfe0fb; }
+
+/* Panels */
+.a-panel { background: var(--a-panel); border: 1px solid var(--a-line); border-radius: var(--a-radius); padding: 1.35rem; box-shadow: var(--a-shadow); }
+.a-panel + .a-panel { margin-top: 1rem; }
+.a-toolbar { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.a-toolbar--spread { justify-content: space-between; }
+.a-stack { display: grid; gap: 0.9rem; }
+.a-row { display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap; }
+.a-row > * { flex: 1 1 12rem; }
+.a-muted { color: var(--a-muted); }
+.a-small { font-size: 0.85rem; }
+
+/* Buttons */
+.a-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+  min-height: 2.35rem; padding: 0.45rem 0.95rem; border-radius: var(--a-radius-sm);
+  border: 1px solid var(--a-line-strong); background: #fff; color: var(--a-text);
+  font: inherit; font-weight: 600; cursor: pointer; text-decoration: none; white-space: nowrap;
+  box-shadow: 0 1px 1px rgb(16 24 40 / 0.04);
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+}
+.a-btn:hover { border-color: #aab5c4; background: #f7f9fc; }
+.a-btn:active:not(:disabled) { transform: translateY(1px); }
+.a-btn:focus-visible { outline: none; box-shadow: var(--a-ring); }
+.a-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.a-btn--primary { background: var(--a-primary); border-color: var(--a-primary); color: #fff; box-shadow: 0 1px 2px rgb(3 69 191 / 0.3); }
+.a-btn--primary:hover { background: var(--a-primary-strong); border-color: var(--a-primary-strong); }
+.a-btn--success { background: var(--a-success); border-color: var(--a-success); color: #fff; }
+.a-btn--success:hover { filter: brightness(0.92); background: var(--a-success); }
+.a-btn--danger { color: var(--a-danger); }
+.a-btn--danger:hover { background: var(--a-danger-soft); border-color: var(--a-danger); }
+.a-btn--sm { min-height: 1.95rem; padding: 0.2rem 0.65rem; font-size: 0.85rem; }
+.a-btn--icon { width: 2.1rem; min-height: 2.1rem; padding: 0; }
+.a-link-btn { background: none; border: 0; padding: 0; color: var(--a-primary); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Forms */
+.a-field { display: grid; gap: 0.35rem; }
+.a-field > span, .a-label { font-weight: 600; font-size: 0.87rem; color: #2a3442; }
+.a-help { color: var(--a-muted); font-size: 0.82rem; }
+.a-input, .a-select, .a-textarea {
+  width: 100%; padding: 0.55rem 0.75rem; border: 1px solid var(--a-line-strong); border-radius: var(--a-radius-sm);
+  font: inherit; color: var(--a-text); background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.a-input:hover, .a-select:hover, .a-textarea:hover { border-color: #aab5c4; }
+.a-textarea { min-height: 5rem; resize: vertical; }
+.a-input:focus, .a-select:focus, .a-textarea:focus { outline: none; border-color: var(--a-primary); box-shadow: var(--a-ring); }
+.a-input::placeholder, .a-textarea::placeholder { color: #8a94a3; }
+.a-check { display: inline-flex; gap: 0.5rem; align-items: center; font-weight: 500; }
+.a-check input { accent-color: var(--a-primary); width: 1rem; height: 1rem; }
+.a-error { color: var(--a-danger); font-size: 0.85rem; }
+
+/* Alerts */
+.a-alert { padding: 0.75rem 1rem; border-radius: var(--a-radius-sm); border: 1px solid; border-left-width: 4px; margin-bottom: 1rem; }
+.a-alert--error { background: var(--a-danger-soft); border-color: #f2c4bf; border-left-color: var(--a-danger); color: #7a1a12; }
+.a-alert--success { background: var(--a-success-soft); border-color: #b9e2c9; border-left-color: var(--a-success); color: #0d5530; }
+.a-alert--warning { background: var(--a-warning-soft); border-color: #f2d49b; border-left-color: var(--a-accent); color: #6b3e00; }
+.a-alert--info { background: var(--a-primary-soft); border-color: #c4d8f5; border-left-color: var(--a-primary); color: #183f73; }
+.a-alert ul { margin: 0.35rem 0 0; padding-left: 1.2rem; }
+
+/* Badges */
+.a-badge { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.12rem 0.55rem; border-radius: 999px; font-size: 0.74rem; font-weight: 700; background: #eef1f5; color: var(--a-muted); }
+.a-badge--live { background: var(--a-success-soft); color: var(--a-success); }
+.a-badge--review { background: var(--a-warning-soft); color: var(--a-warning); }
+.a-badge--changes { background: var(--a-primary-soft); color: var(--a-primary); }
+
+/* Tables */
+.a-table { width: 100%; border-collapse: collapse; background: #fff; }
+.a-table th, .a-table td { text-align: left; padding: 0.7rem 0.9rem; border-bottom: 1px solid var(--a-line); vertical-align: middle; }
+.a-table th { font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--a-muted); background: #f8fafc; }
+.a-table tbody tr { transition: background-color 0.12s ease; }
+.a-table tbody tr:hover { background: #f8fafd; }
+.a-table tbody tr:last-child td { border-bottom: 0; }
+.a-table-wrap { overflow-x: auto; border: 1px solid var(--a-line); border-radius: var(--a-radius); background: #fff; box-shadow: var(--a-shadow); }
+
+/* Dialogs */
+.a-modal-backdrop { position: fixed; inset: 0; background: rgb(0 18 64 / 0.45); backdrop-filter: blur(2px); z-index: 1000; display: grid; place-items: center; padding: 1rem; animation: a-fade 0.15s ease; }
+.a-modal { background: #fff; border-radius: 16px; width: min(100%, 34rem); max-height: calc(100vh - 2rem); overflow: auto; padding: 1.6rem; box-shadow: var(--a-shadow-lg); animation: a-rise 0.18s ease; }
+.a-modal--wide { width: min(100%, 72rem); }
+
+.a-empty { text-align: center; padding: 2.5rem 1rem; color: var(--a-muted); }
+
+@keyframes a-fade { from { opacity: 0; } }
+@keyframes a-rise { from { opacity: 0; transform: translateY(8px) scale(0.99); } }
+@media (prefers-reduced-motion: reduce) {
+  .a-modal-backdrop, .a-modal { animation: none; }
+}
+
+/* Application status pills (shared by Applications and the dashboard) */
+.status { display: inline-block; padding: 0.15rem 0.6rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; background: #eef1f4; color: #3b4652; white-space: nowrap; }
+.status--submitted { background: #e8effc; color: #1f4f9c; }
+.status--under_review { background: #ede8fc; color: #4b2f9c; }
+.status--info_requested { background: #fff1d6; color: #8a4f00; }
+.status--offered { background: #e3f5ea; color: #12733f; }
+.status--rejected { background: #fdecea; color: #a12a1e; }
+.status--withdrawn, .status--declined { background: #eef1f4; color: #5f6b78; }
+.status--accepted { background: #12733f; color: #fff; }

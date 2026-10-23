@@ -1,0 +1,88 @@
+<section class="apply-hero">
+  <div class="container">
+    <p class="hero__eyebrow">{{ site.t('apply.eyebrow', 'Admissions') }}</p>
+    <h1>{{ site.t('apply.title', 'Apply for admission') }}</h1>
+    @if (welcome()) {
+      <p class="apply-hero__text">{{ welcome() }}</p>
+    }
+  </div>
+</section>
+
+<section class="section">
+  <div class="container apply-landing">
+    <div class="apply-info">
+      <h2>Before you start</h2>
+      <ul class="checklist">
+        <li>Your KCSE index number, year and results</li>
+        @for (d of options()?.documentTypes ?? []; track d.id) {
+          @if (d.isRequired) {
+            <li>{{ d.name }} <span class="muted">({{ d.accepts === 'pdf' ? 'PDF' : d.accepts === 'image' ? 'photo' : 'photo or PDF' }})</span></li>
+          }
+        }
+        <li>Contact details for your next of kin</li>
+      </ul>
+
+      @if (feeText()) {
+        <div class="fee-note">
+          <strong>Application fee: {{ feeText() }}</strong>
+          <p>You will see how to pay after you submit your application.</p>
+        </div>
+      }
+
+      <h2 class="intakes-title">Open intakes</h2>
+      @if (options(); as o) {
+        @if (o.intakes.length) {
+          <ul class="intakes">
+            @for (i of o.intakes; track i.id) {
+              <li>
+                <strong>{{ i.name }}</strong>
+                <span class="muted">Apply by {{ i.closesAt | date: 'd MMMM y' }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="muted">Applications are currently closed. Please check back soon or contact admissions.</p>
+        }
+      }
+    </div>
+
+    <div class="auth-card">
+      <div class="auth-tabs" role="tablist">
+        <button role="tab" type="button" [attr.aria-selected]="mode() === 'register'" (click)="mode.set('register'); error.set('')">Create account</button>
+        <button role="tab" type="button" [attr.aria-selected]="mode() === 'signin'" (click)="mode.set('signin'); error.set('')">Sign in</button>
+      </div>
+      @if (error()) {
+        <p class="form-error" role="alert">{{ error() }}</p>
+      }
+      <form class="form-stack" (ngSubmit)="submit()">
+        @if (mode() === 'register') {
+          <label class="field"><span>Full name</span><input name="fullName" autocomplete="name" required [(ngModel)]="fullName" /></label>
+        }
+        <label class="field"><span>Email</span><input name="email" type="email" autocomplete="email" required [(ngModel)]="email" /></label>
+        @if (mode() === 'register') {
+          <label class="field"><span>Phone number</span><input name="phone" type="tel" autocomplete="tel" placeholder="0712 345 678" required [(ngModel)]="phone" /></label>
+        }
+        <label class="field">
+          <span>Password</span>
+          <input name="password" type="password" [attr.autocomplete]="mode() === 'register' ? 'new-password' : 'current-password'" required [attr.minlength]="mode() === 'register' ? 12 : null" [(ngModel)]="password" />
+          @if (mode() === 'register') {
+            <small class="muted">At least 12 characters. A short sentence works well.</small>
+          }
+        </label>
+        @if (mode() === 'register') {
+          <label class="consent">
+            <input type="checkbox" name="acceptTerms" required [(ngModel)]="acceptTerms" />
+            <span>
+              <!-- Kept on one line so no stray spaces appear around the links. -->
+              @for (part of consentParts(); track $index) {@if (part.href) {<a [href]="part.href" target="_blank" rel="noopener">{{ part.text }}<span class="visually-hidden"> (opens in a new tab)</span></a>} @else {<span>{{ part.text }}</span>}}
+              <small class="muted consent__minor">{{ site.t('apply.register.minor', 'If I am under 18, my parent or guardian has agreed to this application.') }}</small>
+            </span>
+          </label>
+        }
+        <button class="btn btn--accent btn--lg" type="submit" [disabled]="busy()">
+          {{ busy() ? 'Please wait…' : mode() === 'register' ? 'Create account and start' : 'Sign in and continue' }}
+        </button>
+      </form>
+    </div>
+  </div>
+</section>

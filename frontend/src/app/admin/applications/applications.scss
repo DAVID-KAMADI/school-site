@@ -1,0 +1,39 @@
+.head { margin-bottom: 1rem; }
+.head h1 { margin: 0; }
+.pipeline { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
+.chip { display: inline-flex; gap: 0.5rem; align-items: center; padding: 0.45rem 0.85rem; border-radius: 999px; border: 1px solid var(--a-line); background: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.chip b { background: #eef1f4; padding: 0.05rem 0.5rem; border-radius: 999px; font-size: 0.8rem; }
+.chip--on { background: var(--a-primary); border-color: var(--a-primary); color: #fff; }
+.chip--on b { background: rgb(255 255 255 / 0.25); color: #fff; }
+.filters { margin: 1rem 0; }
+.filters .a-input { flex: 1 1 18rem; width: auto; }
+.filters .a-select { width: auto; max-width: 16rem; }
+.pager { justify-content: center; margin-top: 1rem; }
+td .a-badge { margin-left: 0.3rem; }
+
+
+/* Detail */
+.detail-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem; align-items: flex-start; margin-bottom: 1rem; }
+.detail-head h1 { margin: 0.2rem 0; }
+.detail { display: grid; gap: 1rem; align-items: start; }
+@media (min-width: 1100px) { .detail { grid-template-columns: 1fr 22rem; } }
+.dl { display: grid; grid-template-columns: minmax(9rem, auto) 1fr; gap: 0.4rem 1rem; margin: 0; }
+.dl dt { color: var(--a-muted); }
+.dl dd { margin: 0; font-weight: 500; }
+.sections { display: grid; gap: 1rem; }
+@media (min-width: 800px) { .sections { grid-template-columns: 1fr 1fr; } }
+.docs { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
+.docs li { border: 1px solid var(--a-line); border-left: 4px solid var(--a-line); border-radius: 8px; padding: 0.75rem 0.9rem; display: grid; gap: 0.45rem; }
+.docs li.accepted { border-left-color: var(--a-success); }
+.docs li.rejected { border-left-color: var(--a-danger); }
+.events { list-style: none; margin: 0; padding: 0 0 0 1rem; border-left: 2px solid var(--a-line); display: grid; gap: 0.85rem; }
+.events li { position: relative; }
+.events li::before { content: ''; position: absolute; left: calc(-1rem - 6px); top: 0.35rem; width: 10px; height: 10px; border-radius: 50%; background: var(--a-primary); }
+.events li.internal::before { background: #9aa5b1; }
+.events p { margin: 0.15rem 0 0; white-space: pre-wrap; }
+.actions-panel { display: grid; gap: 0.5rem; }
+.warn { color: var(--a-warning); font-weight: 600; }
+.funding { margin-top: 1.5rem; }
+
+/* Groups the setup form fields so they can be switched to view only. */
+fieldset.plain { border: 0; margin: 0; padding: 0; min-width: 0; }

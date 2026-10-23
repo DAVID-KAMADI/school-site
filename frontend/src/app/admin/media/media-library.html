@@ -1,0 +1,139 @@
+@if (!pickerKind()) {
+  <h1>Media library</h1>
+}
+@if (error()) {
+  <div class="a-alert a-alert--error" role="alert">{{ error() }}</div>
+}
+
+<div class="a-toolbar a-toolbar--spread filters">
+  <form class="a-toolbar" (ngSubmit)="load()">
+    <input class="a-input" type="search" name="search" placeholder="Search name, alt text, caption" [(ngModel)]="search" aria-label="Search media" />
+    <select class="a-select" name="folder" [(ngModel)]="folder" (ngModelChange)="load()" aria-label="Folder">
+      <option value="">All folders</option>
+      @for (f of folders(); track f) {
+        <option [value]="f">{{ f }}</option>
+      }
+    </select>
+    @if (!pickerKind()) {
+      <select class="a-select" name="kind" [(ngModel)]="kind" (ngModelChange)="load()" aria-label="Type">
+        <option value="">Images and documents</option>
+        <option value="image">Images</option>
+        <option value="document">Documents</option>
+      </select>
+    }
+    <button class="a-btn" type="submit">Search</button>
+  </form>
+  @if (auth.can('media.upload')) {
+    <div class="a-toolbar">
+      <input class="a-input folder-input" name="uploadFolder" placeholder="Folder for uploads (optional)" [(ngModel)]="uploadFolder" aria-label="Folder for uploads" list="folder-list" />
+      <datalist id="folder-list">
+        @for (f of folders(); track f) {
+          <option [value]="f"></option>
+        }
+      </datalist>
+      <label class="a-btn a-btn--primary">
+        {{ uploading() ? 'Uploading ' + uploading() + '…' : 'Upload files' }}
+        <input type="file" multiple [accept]="accept()" (change)="upload($event)" hidden />
+      </label>
+    </div>
+  }
+</div>
+
+<div class="library" [class.library--with-panel]="selected()">
+  <div>
+    @if (!items().length && !busy()) {
+      <div class="a-empty">No files yet. Upload photos (JPG, PNG, WebP) or documents (PDF, Word, Excel, PowerPoint).</div>
+    }
+    <ul class="grid">
+      @for (m of items(); track m.id) {
+        <li>
+          <button type="button" class="tile" [class.tile--active]="selected()?.id === m.id" (click)="select(m)" (dblclick)="pickerKind() && choose(m)">
+            @if (m.kind === 'image') {
+              <img [src]="thumb(m)" [alt]="m.altText || ''" loading="lazy" />
+            } @else {
+              <span class="doc">{{ m.originalName.split('.').pop()?.toUpperCase() }}</span>
+            }
+            <span class="tile__name">{{ m.originalName }}</span>
+            @if (m.kind === 'image' && !m.altText) {
+              <span class="tile__warn">No alt text</span>
+            }
+          </button>
+        </li>
+      }
+    </ul>
+    @if (pages() > 1) {
+      <div class="a-toolbar pager">
+        <button class="a-btn a-btn--sm" type="button" [disabled]="page() <= 1" (click)="load(page() - 1)">Previous</button>
+        <span class="a-muted">Page {{ page() }} of {{ pages() }}</span>
+        <button class="a-btn a-btn--sm" type="button" [disabled]="page() >= pages()" (click)="load(page() + 1)">Next</button>
+      </div>
+    }
+  </div>
+
+  @if (selected(); as s) {
+    <aside class="a-panel details">
+      @if (notice()) {
+        <div class="a-alert a-alert--success">{{ notice() }}</div>
+      }
+      @if (s.kind === 'image') {
+        <div class="focal" title="Click the most important part of the photo">
+          <img [src]="thumb(s)" alt="" (click)="setFocal($event)" />
+          <span class="focal__dot" [style.left.%]="s.focalX * 100" [style.top.%]="s.focalY * 100"></span>
+        </div>
+        <p class="a-help">Click the most important part of the photo. It stays visible when the photo is cropped on phones.</p>
+      }
+      <p class="a-small a-muted">
+        {{ s.originalName }} · {{ size(s.sizeBytes) }}
+        @if (s.width) {
+          · {{ s.width | number }}×{{ s.height | number }}
+        }
+        <br /><a [href]="s.url" target="_blank" rel="noopener">Open original</a>
+      </p>
+      <form class="a-stack" (ngSubmit)="save()">
+        @if (s.kind === 'image') {
+          <label class="a-field">
+            <span>Alt text</span>
+            <textarea class="a-textarea alt" name="alt" maxlength="300" [(ngModel)]="s.altText"></textarea>
+            <span class="a-help">Describe the photo for people who cannot see it, e.g. “Nursing students practising in the skills lab”. Leave empty only for decorative images.</span>
+          </label>
+        }
+        <label class="a-field"><span>Caption</span><input class="a-input" name="caption" maxlength="500" [(ngModel)]="s.caption" /></label>
+        <label class="a-field"><span>Credit</span><input class="a-input" name="credit" maxlength="200" [(ngModel)]="s.credit" /></label>
+        <label class="a-field"><span>Folder</span><input class="a-input" name="folder" maxlength="150" [(ngModel)]="s.folder" list="folder-list" /></label>
+        @if (s.kind === 'image') {
+          <label class="a-check"><input type="checkbox" name="consent" [(ngModel)]="s.hasConsent" /> People in this photo have given consent</label>
+        }
+        <div class="a-toolbar">
+          @if (auth.can('media.edit')) {
+            <button class="a-btn a-btn--primary" type="submit">Save details</button>
+          }
+          @if (pickerKind() && s.kind === pickerKind()) {
+            <button class="a-btn a-btn--success" type="button" (click)="choose(s)">Use this file</button>
+          }
+        </div>
+      </form>
+
+      <h3 class="used">Where it is used</h3>
+      @if (s.usages?.length) {
+        <ul class="a-small">
+          @for (u of s.usages; track $index) {
+            <li>{{ u.entityType }} #{{ u.entityId }} <span class="a-muted">({{ u.fieldPath }})</span></li>
+          }
+        </ul>
+      } @else {
+        <p class="a-small a-muted">Not used on any page yet.</p>
+      }
+
+      @if (!pickerKind()) {
+        <div class="a-toolbar">
+          @if (auth.can('media.edit')) {
+            <label class="a-btn a-btn--sm">Replace file<input type="file" [accept]="accept()" (change)="replace($event)" hidden /></label>
+          }
+          @if (auth.can('media.delete')) {
+            <button class="a-btn a-btn--sm a-btn--danger" type="button" (click)="remove()">Delete</button>
+          }
+        </div>
+      }
+    </aside>
+  }
+</div>

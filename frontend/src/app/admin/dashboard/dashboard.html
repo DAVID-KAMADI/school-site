@@ -1,0 +1,282 @@
+<header class="hello">
+  <div>
+    <p class="hello__date">{{ today | date: 'EEEE, d MMMM y' }}</p>
+    <h1>{{ greeting() }}{{ firstName() ? ', ' + firstName() : '' }}</h1>
+    <p class="a-muted hello__lead">Here is what is happening on the website today.</p>
+  </div>
+  <div class="hello__actions">
+    @if (auth.can('pages.create')) {
+      <a class="a-btn a-btn--primary" routerLink="/admin/pages"><app-icon name="plus" [size]="16" /> New page</a>
+    }
+    @if (auth.can('media.upload')) {
+      <a class="a-btn" routerLink="/admin/media"><app-icon name="upload" [size]="16" /> Upload media</a>
+    }
+    @if (auth.can('applications.view')) {
+      <a class="a-btn" routerLink="/admin/applications"><app-icon name="inbox" [size]="16" /> Applications</a>
+    }
+  </div>
+</header>
+
+@if (error()) {
+  <div class="a-alert a-alert--error" role="alert">{{ error() }} <button class="a-link-btn" type="button" (click)="load()">Try again</button></div>
+}
+
+@if (data(); as d) {
+  <!-- Needs attention -->
+  <section class="card attention" aria-labelledby="att-h">
+    <h2 id="att-h">Needs your attention</h2>
+    @if (attention().length) {
+      <ul class="att-list">
+        @for (a of attention(); track a.text) {
+          <li>
+            <a [routerLink]="a.link" [class]="'att att--' + a.tone">
+              <span class="att__icon"><app-icon [name]="a.icon" [size]="17" /></span>
+              <span class="att__text">{{ a.text }}</span>
+              <app-icon class="att__go" name="arrow" [size]="16" />
+            </a>
+          </li>
+        }
+      </ul>
+    } @else {
+      <p class="all-clear"><span class="all-clear__icon"><app-icon name="check" [size]="16" /></span> All caught up. Nothing is waiting on you.</p>
+    }
+  </section>
+
+  <!-- Key numbers -->
+  <section class="kpis" aria-label="Key numbers">
+    @if (apps(); as a) {
+      <a class="kpi" routerLink="/admin/applications">
+        <span class="kpi__icon kpi__icon--blue"><app-icon name="inbox" /></span>
+        <span class="kpi__label">Applications received</span>
+        <strong class="kpi__value">{{ submittedTotal() | number }}</strong>
+        <span class="kpi__foot"><b class="up">+{{ a.submittedThisWeek }}</b> in the last 7 days</span>
+      </a>
+      <a class="kpi" routerLink="/admin/applications">
+        <span class="kpi__icon kpi__icon--orange"><app-icon name="clock" /></span>
+        <span class="kpi__label">To review</span>
+        <strong class="kpi__value">{{ toReview() | number }}</strong>
+        <span class="kpi__foot">{{ a.counts['info_requested'] ?? 0 }} waiting on applicants</span>
+      </a>
+      <a class="kpi" routerLink="/admin/applications">
+        <span class="kpi__icon kpi__icon--purple"><app-icon name="award" /></span>
+        <span class="kpi__label">Offers made</span>
+        <strong class="kpi__value">{{ ((a.counts['offered'] ?? 0) + (a.counts['accepted'] ?? 0) + (a.counts['declined'] ?? 0)) | number }}</strong>
+        <span class="kpi__foot"><b class="ok">{{ a.counts['accepted'] ?? 0 }}</b> accepted · {{ a.counts['offered'] ?? 0 }} awaiting reply</span>
+      </a>
+      <a class="kpi" routerLink="/admin/applications">
+        <span class="kpi__icon kpi__icon--green"><app-icon name="wallet" /></span>
+        <span class="kpi__label">Fees to confirm</span>
+        <strong class="kpi__value">{{ a.feeToConfirm | number }}</strong>
+        <span class="kpi__foot">M-Pesa codes reported by applicants</span>
+      </a>
+    } @else if (d.content; as c) {
+      <a class="kpi" routerLink="/admin/pages">
+        <span class="kpi__icon kpi__icon--blue"><app-icon name="pages" /></span>
+        <span class="kpi__label">Published pages</span>
+        <strong class="kpi__value">{{ c.pages['published'] ?? 0 }}</strong>
+        <span class="kpi__foot">{{ c.scheduled }} scheduled</span>
+      </a>
+      <a class="kpi" routerLink="/admin/pages">
+        <span class="kpi__icon kpi__icon--orange"><app-icon name="clock" /></span>
+        <span class="kpi__label">Awaiting approval</span>
+        <strong class="kpi__value">{{ c.pages['in_review'] ?? 0 }}</strong>
+        <span class="kpi__foot">Sent in by editors</span>
+      </a>
+      <a class="kpi" routerLink="/admin/pages">
+        <span class="kpi__icon kpi__icon--purple"><app-icon name="text" /></span>
+        <span class="kpi__label">Drafts</span>
+        <strong class="kpi__value">{{ c.pages['draft'] ?? 0 }}</strong>
+        <span class="kpi__foot">Not yet on the website</span>
+      </a>
+      <a class="kpi" routerLink="/admin/media">
+        <span class="kpi__icon kpi__icon--green"><app-icon name="media" /></span>
+        <span class="kpi__label">Media files</span>
+        <strong class="kpi__value">{{ (c.media.images + c.media.documents) | number }}</strong>
+        <span class="kpi__foot">{{ size(c.media.bytes) }} in total</span>
+      </a>
+    }
+  </section>
+
+  @if (apps(); as a) {
+    <div class="grid grid--wide">
+      <!-- Trend -->
+      <section class="card" aria-labelledby="trend-h">
+        <div class="card__head">
+          <div>
+            <h2 id="trend-h">Applications, last 30 days</h2>
+            <p class="a-muted a-small">{{ chart().total }} submitted</p>
+          </div>
+          <span class="pill"><app-icon name="trend" [size]="15" /> Daily</span>
+        </div>
+        <div class="chart">
+          <svg [attr.viewBox]="'0 -8 ' + chart().w + ' ' + (chart().h + 8)" preserveAspectRatio="none" role="img" [attr.aria-label]="chart().total + ' applications submitted in the last 30 days'">
+            @for (g of chart().grid; track g.y) {
+              <line x1="0" [attr.x2]="chart().w" [attr.y1]="g.y" [attr.y2]="g.y" class="gridline" />
+            }
+            @for (b of chart().bars; track $index) {
+              <rect [attr.x]="b.x" [attr.y]="b.y" [attr.width]="b.width" [attr.height]="b.height" rx="3" [class.bar--empty]="b.empty" class="bar"><title>{{ b.label }}</title></rect>
+            }
+          </svg>
+          <div class="chart__y" aria-hidden="true">
+            @for (g of chart().grid; track g.y) {
+              <span [style.top.%]="((g.y + 8) / (chart().h + 8)) * 100">{{ g.value }}</span>
+            }
+          </div>
+        </div>
+        <div class="chart__x" aria-hidden="true">
+          <span>{{ shortDate(chart().first) }}</span><span>{{ shortDate(chart().mid) }}</span><span>Today</span>
+        </div>
+      </section>
+
+      <!-- Pipeline -->
+      <section class="card" aria-labelledby="pipe-h">
+        <div class="card__head">
+          <h2 id="pipe-h">Admissions pipeline</h2>
+          <a class="more" routerLink="/admin/applications">Open <app-icon name="arrow" [size]="14" /></a>
+        </div>
+        <ul class="pipe">
+          @for (s of pipeline(); track s.key) {
+            <li>
+              <span class="pipe__label"><i [style.background]="s.color"></i>{{ s.label }}</span>
+              <span class="pipe__track"><span class="pipe__bar" [style.width.%]="s.pct" [style.background]="s.color"></span></span>
+              <strong class="pipe__n">{{ s.count }}</strong>
+            </li>
+          }
+        </ul>
+        <p class="a-small a-muted pipe__drafts">{{ a.counts['draft'] ?? 0 }} started but not yet submitted</p>
+      </section>
+    </div>
+
+    <div class="grid grid--wide">
+      <!-- Recent applications -->
+      <section class="card card--flush" aria-labelledby="recent-h">
+        <div class="card__head card__head--pad">
+          <h2 id="recent-h">Latest applications</h2>
+          <a class="more" routerLink="/admin/applications">View all <app-icon name="arrow" [size]="14" /></a>
+        </div>
+        @if (a.recent.length) {
+          <ul class="rows">
+            @for (r of a.recent; track r.id) {
+              <li>
+                <a class="row" [routerLink]="['/admin/applications', r.id]">
+                  <span class="avatar" aria-hidden="true">{{ r.fullName.charAt(0) }}</span>
+                  <span class="row__main">
+                    <strong>{{ r.fullName }}</strong>
+                    <small>{{ r.programme ?? 'No programme' }} · {{ r.applicationNumber }}</small>
+                  </span>
+                  <span class="row__side">
+                    <span [class]="'status status--' + r.status">{{ statusLabels[r.status] }}</span>
+                    <small>{{ ago(r.submittedAt) }}</small>
+                  </span>
+                </a>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="a-empty">No applications have been submitted yet.</p>
+        }
+      </section>
+
+      <!-- Intakes and programmes -->
+      <section class="card" aria-labelledby="intake-h">
+        <div class="card__head">
+          <h2 id="intake-h">Open intakes</h2>
+          @if (auth.canAny(setupPermissions)) {
+            <a class="more" routerLink="/admin/admissions-setup">Manage <app-icon name="arrow" [size]="14" /></a>
+          }
+        </div>
+        @for (i of a.openIntakes; track i.id) {
+          <div class="intake">
+            <span class="intake__icon"><app-icon name="calendar" [size]="17" /></span>
+            <span class="intake__main">
+              <strong>{{ i.name }}</strong>
+              <small>Closes {{ i.closesAt | date: 'd MMM y' }} · {{ i.applications }} application{{ i.applications === 1 ? '' : 's' }}</small>
+            </span>
+            <span class="days" [class.days--soon]="daysLeft(i.closesAt) <= 14">{{ daysLeft(i.closesAt) }}<small>days left</small></span>
+          </div>
+        } @empty {
+          <p class="a-muted">No intake is open right now, so the Apply page is not taking applications.</p>
+        }
+
+        @if (a.programmes.length) {
+          <h3 class="sub">Most popular programmes</h3>
+          <ol class="top">
+            @for (p of a.programmes; track p.name) {
+              <li><span>{{ p.name }}</span><strong>{{ p.count }}</strong></li>
+            }
+          </ol>
+        }
+      </section>
+    </div>
+  }
+
+  <div class="grid">
+    @if (d.content; as c) {
+      <!-- Content -->
+      <section class="card card--flush" aria-labelledby="content-h">
+        <div class="card__head card__head--pad">
+          <h2 id="content-h">Recently edited pages</h2>
+          <a class="more" routerLink="/admin/pages">All pages <app-icon name="arrow" [size]="14" /></a>
+        </div>
+        <div class="content-stats">
+          <span><b>{{ c.pages['published'] ?? 0 }}</b> published</span>
+          <span><b>{{ c.pages['in_review'] ?? 0 }}</b> awaiting approval</span>
+          <span><b>{{ c.pages['draft'] ?? 0 }}</b> drafts</span>
+          <span><b>{{ c.media.images }}</b> images</span>
+        </div>
+        <ul class="rows">
+          @for (p of c.recentlyEdited; track p.id) {
+            <li>
+              <a class="row" [routerLink]="['/admin/pages', p.id]">
+                <span class="avatar avatar--page" aria-hidden="true"><app-icon name="pages" [size]="16" /></span>
+                <span class="row__main">
+                  <strong>{{ p.title }}</strong>
+                  <small>{{ p.updatedBy ?? 'Someone' }} · {{ ago(p.updatedAt) }}</small>
+                </span>
+                <span class="a-badge" [class.a-badge--live]="p.status === 'published'" [class.a-badge--review]="p.status === 'in_review'">{{ pageStatus[p.status] ?? p.status }}</span>
+              </a>
+            </li>
+          } @empty {
+            <li class="a-empty">No pages yet.</li>
+          }
+        </ul>
+      </section>
+    }
+
+    <!-- Activity -->
+    @if (d.activity; as act) {
+      <section class="card" aria-labelledby="act-h">
+        <div class="card__head">
+          <h2 id="act-h">Recent activity</h2>
+          <a class="more" routerLink="/admin/audit">Audit log <app-icon name="arrow" [size]="14" /></a>
+        </div>
+        <ol class="feed">
+          @for (e of act.recent; track e.id) {
+            <li [class.feed--warn]="e.action.includes('fail') || e.action.includes('blocked') || e.action.includes('locked')">
+              <span class="feed__dot" aria-hidden="true"></span>
+              <span class="feed__text"><strong>{{ e.userName ?? 'Someone' }}</strong> {{ activityLabel(e.action).charAt(0).toLowerCase() + activityLabel(e.action).slice(1) }}</span>
+              <small>{{ ago(e.createdAt) }}</small>
+            </li>
+          } @empty {
+            <li class="a-muted">Nothing recorded yet.</li>
+          }
+        </ol>
+      </section>
+    } @else if (d.people; as p) {
+      <section class="card" aria-labelledby="people-h">
+        <h2 id="people-h">Staff</h2>
+        <p><b>{{ p.staff }}</b> staff accounts</p>
+      </section>
+    }
+  </div>
+} @else if (!error()) {
+  <div class="skeleton" aria-busy="true" aria-label="Loading dashboard">
+    <div class="sk sk--bar"></div>
+    <div class="sk-row">
+      @for (i of [1, 2, 3, 4]; track i) {
+        <div class="sk sk--kpi"></div>
+      }
+    </div>
+    <div class="sk-row sk-row--2"><div class="sk sk--big"></div><div class="sk sk--big"></div></div>
+  </div>
+}

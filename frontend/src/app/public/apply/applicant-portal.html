@@ -1,0 +1,385 @@
+<section class="apply-hero apply-hero--compact">
+  <div class="container portal-head">
+    <div>
+      <p class="hero__eyebrow">{{ site.t('apply.title', 'Apply for admission') }}</p>
+      <h1>{{ showForm() ? 'Your application' : 'Application status' }}</h1>
+      @if (app()?.applicationNumber) {
+        <p class="apply-hero__text">Application number <strong>{{ app()!.applicationNumber }}</strong></p>
+      }
+    </div>
+    <div class="portal-user">
+      <span>{{ auth.user()?.fullName }}</span>
+      <button type="button" class="btn btn--ghost-light" (click)="signOut()">Sign out</button>
+    </div>
+  </div>
+</section>
+
+<section class="section portal">
+  <div class="container">
+    @if (error() && !showForm()) {
+      <p class="form-error" role="alert">{{ error() }}</p>
+    }
+
+    @if (!app()) {
+      <p class="muted">Loading your application…</p>
+    } @else if (showForm()) {
+      <!-- ================= FORM ================= -->
+      <div class="wizard">
+        <nav class="stepper" aria-label="Application steps">
+          <ol>
+            @for (s of steps; track s.key; let i = $index) {
+              <li>
+                <button type="button" class="stepper__btn" [class.stepper__btn--current]="i === step()" [class.stepper__btn--done]="stepDone(s.key)" [attr.aria-current]="i === step() ? 'step' : null" (click)="goTo(i)">
+                  <span class="stepper__num" aria-hidden="true">{{ stepDone(s.key) && i !== step() ? '✓' : i + 1 }}</span>
+                  <span>{{ site.t('apply.step.' + s.textKey, s.fallback) }}</span>
+                </button>
+              </li>
+            }
+          </ol>
+          <p class="stepper__progress" aria-live="polite">
+            @if (saved()) {
+              <span class="saved">✓ {{ site.t('apply.saved', 'Saved') }}</span>
+            } @else {
+              Step {{ step() + 1 }} of {{ steps.length }}
+            }
+          </p>
+        </nav>
+
+        <div class="step-panel">
+          <h2>{{ site.t('apply.step.' + currentStep().textKey, currentStep().fallback) }}</h2>
+          <p class="muted step-help">{{ site.t('apply.help.' + currentStep().textKey, '') }}</p>
+          @if (app()!.status === 'info_requested') {
+            <p class="form-warning">You are updating your application after a request from admissions. Submit it again on the last step.</p>
+          }
+          @if (error()) {
+            <p class="form-error" role="alert">{{ error() }}</p>
+          }
+
+          @switch (currentStep().key) {
+            @case ('programme') {
+              <div class="form-stack">
+                <fieldset class="field">
+                  <legend class="field-label">Intake</legend>
+                  @if (!options()?.intakes?.length) {
+                    <p class="form-warning">There are no open intakes at the moment.</p>
+                  }
+                  <div class="choices">
+                    @for (i of options()?.intakes ?? []; track i.id) {
+                      <label class="choice">
+                        <input type="radio" name="intake" [value]="i.id" [(ngModel)]="forms['programme']['intakeId']" />
+                        <span><strong>{{ i.name }}</strong><small>Apply by {{ i.closesAt | date: 'd MMM y' }}</small></span>
+                      </label>
+                    }
+                  </div>
+                  @if (err('intakeId')) {<p class="field-error">{{ err('intakeId') }}</p>}
+                </fieldset>
+
+                <label class="field" [class.field--error]="err('programmeId')">
+                  <span>Programme</span>
+                  <select name="programme" [ngModel]="forms['programme']['programmeId']" (ngModelChange)="chooseProgramme($event)">
+                    <option [ngValue]="null">Choose a programme…</option>
+                    @for (g of programmeGroups(); track g.school) {
+                      <optgroup [label]="g.school">
+                        @for (p of g.items; track p.id) {
+                          <option [ngValue]="p.id">{{ p.name }} ({{ labels.LEVEL_LABELS[p.level] }})</option>
+                        }
+                      </optgroup>
+                    }
+                  </select>
+                  @if (err('programmeId')) {<p class="field-error">{{ err('programmeId') }}</p>}
+                </label>
+
+                @if (selectedProgramme(); as p) {
+                  <div class="programme-card">
+                    <strong>{{ p.name }}</strong>
+                    <span class="muted">{{ labels.LEVEL_LABELS[p.level] }}@if (p.duration) { · {{ p.duration }}}@if (p.minMeanGrade) { · Minimum KCSE mean grade {{ p.minMeanGrade }}}</span>
+                    @if (p.description) {<p>{{ p.description }}</p>}
+                  </div>
+                  <fieldset class="field">
+                    <legend class="field-label">How would you like to study?</legend>
+                    <div class="choices">
+                      @for (m of p.studyModes; track m) {
+                        <label class="choice"><input type="radio" name="mode" [value]="m" [(ngModel)]="forms['programme']['studyMode']" /> {{ labels.STUDY_MODE_LABELS[m] }}</label>
+                      }
+                    </div>
+                  </fieldset>
+                }
+              </div>
+            }
+
+            @case ('personal') {
+              <div class="form-grid">
+                <label class="field" [class.field--error]="err('firstName')"><span>First name</span><input name="firstName" autocomplete="given-name" [(ngModel)]="forms['personal']['firstName']" />@if (err('firstName')) {<p class="field-error">{{ err('firstName') }}</p>}</label>
+                <label class="field"><span>Middle name <small class="muted">(optional)</small></span><input name="middleName" autocomplete="additional-name" [(ngModel)]="forms['personal']['middleName']" /></label>
+                <label class="field" [class.field--error]="err('lastName')"><span>Last name</span><input name="lastName" autocomplete="family-name" [(ngModel)]="forms['personal']['lastName']" />@if (err('lastName')) {<p class="field-error">{{ err('lastName') }}</p>}</label>
+                <label class="field" [class.field--error]="dobError()"><span>Date of birth</span><input name="dob" type="date" autocomplete="bday" min="1920-01-01" [max]="latestBirthDate()" [attr.aria-describedby]="dobError() ? 'dob-error' : 'dob-help'" [(ngModel)]="forms['personal']['dateOfBirth']" />@if (dobError(); as msg) {<p class="field-error" id="dob-error" role="alert">{{ msg }}</p>} @else {<small class="muted" id="dob-help">You must be at least {{ minimumAge() }} years old to be admitted.</small>}</label>
+                <label class="field"><span>Gender</span>
+                  <select name="gender" [(ngModel)]="forms['personal']['gender']"><option value="">Choose…</option>@for (g of labels.GENDER_LABELS | keyvalue; track g.key) {<option [value]="g.key">{{ g.value }}</option>}</select>
+                </label>
+                <label class="field"><span>Nationality</span><input name="nationality" [(ngModel)]="forms['personal']['nationality']" /></label>
+                <label class="field"><span>Identification document</span>
+                  <select name="idType" [(ngModel)]="forms['personal']['idType']">@for (t of labels.ID_TYPE_LABELS | keyvalue; track t.key) {<option [value]="t.key">{{ t.value }}</option>}</select>
+                </label>
+                <label class="field" [class.field--error]="err('idNumber')"><span>Document number</span><input name="idNumber" [(ngModel)]="forms['personal']['idNumber']" />@if (err('idNumber')) {<p class="field-error">{{ err('idNumber') }}</p>}</label>
+                <label class="field" [class.field--error]="err('phone')"><span>Phone number</span><input name="phone" type="tel" autocomplete="tel" placeholder="0712 345 678" [(ngModel)]="forms['personal']['phone']" />@if (err('phone')) {<p class="field-error">{{ err('phone') }}</p>}</label>
+                <label class="field" [class.field--error]="err('country')"><span>Country of residence</span>
+                  <select name="country" autocomplete="country-name" [(ngModel)]="forms['personal']['country']">
+                    <option value="">Choose…</option>
+                    <optgroup label="RCMRD member states">@for (c of rcmrdStates; track c) {<option [value]="c">{{ c }}</option>}</optgroup>
+                    <optgroup label="Other countries">@for (c of otherCountries; track c) {<option [value]="c">{{ c }}</option>}</optgroup>
+                  </select>
+                  @if (err('country')) {<p class="field-error">{{ err('country') }}</p>}
+                </label>
+                @if (forms['personal']['country'] === 'Kenya') {
+                  <label class="field" [class.field--error]="err('county')"><span>County of residence</span>
+                    <select name="county" [(ngModel)]="forms['personal']['county']"><option value="">Choose…</option>@for (c of counties; track c) {<option [value]="c">{{ c }}</option>}</select>
+                    @if (err('county')) {<p class="field-error">{{ err('county') }}</p>}
+                  </label>
+                } @else if (forms['personal']['country']) {
+                  <label class="field"><span>Region, province or city <small class="muted">(optional)</small></span><input name="region" autocomplete="address-level1" [(ngModel)]="forms['personal']['region']" /></label>
+                }
+                <label class="field field--wide" [class.field--error]="err('address')"><span>Postal or physical address</span><input name="address" autocomplete="street-address" [(ngModel)]="forms['personal']['address']" />@if (err('address')) {<p class="field-error">{{ err('address') }}</p>}</label>
+                <label class="field field--wide"><span>Disability or support needs <small class="muted">(optional, helps us support you)</small></span><input name="disability" [(ngModel)]="forms['personal']['disability']" /></label>
+              </div>
+            }
+
+            @case ('nextOfKin') {
+              <div class="form-grid">
+                <label class="field" [class.field--error]="err('name')"><span>Full name</span><input name="kinName" [(ngModel)]="forms['nextOfKin']['name']" />@if (err('name')) {<p class="field-error">{{ err('name') }}</p>}</label>
+                <label class="field" [class.field--error]="err('relationship')"><span>Relationship to you</span><input name="kinRel" placeholder="e.g. Mother" [(ngModel)]="forms['nextOfKin']['relationship']" />@if (err('relationship')) {<p class="field-error">{{ err('relationship') }}</p>}</label>
+                <label class="field" [class.field--error]="err('phone')"><span>Phone number</span><input name="kinPhone" type="tel" [(ngModel)]="forms['nextOfKin']['phone']" />@if (err('phone')) {<p class="field-error">{{ err('phone') }}</p>}</label>
+                <label class="field" [class.field--error]="err('email')"><span>Email <small class="muted">(optional)</small></span><input name="kinEmail" type="email" [(ngModel)]="forms['nextOfKin']['email']" />@if (err('email')) {<p class="field-error">{{ err('email') }}</p>}</label>
+              </div>
+            }
+
+            @case ('education') {
+              <div class="form-grid">
+                <label class="field" [class.field--error]="err('kcseIndexNumber')"><span>KCSE index number</span><input name="index" inputmode="numeric" maxlength="11" placeholder="11 digits" [(ngModel)]="forms['education']['kcseIndexNumber']" />@if (err('kcseIndexNumber')) {<p class="field-error">{{ err('kcseIndexNumber') }}</p>}</label>
+                <label class="field" [class.field--error]="err('kcseYear')"><span>Year of KCSE</span><input name="year" type="number" min="1989" [(ngModel)]="forms['education']['kcseYear']" />@if (err('kcseYear')) {<p class="field-error">{{ err('kcseYear') }}</p>}</label>
+                <label class="field"><span>Mean grade</span>
+                  <select name="mean" [(ngModel)]="forms['education']['meanGrade']"><option value="">Choose…</option>@for (g of grades; track g) {<option [value]="g">{{ g }}</option>}</select>
+                </label>
+                <label class="field" [class.field--error]="err('secondarySchool')"><span>Secondary school</span><input name="school" [(ngModel)]="forms['education']['secondarySchool']" />@if (err('secondarySchool')) {<p class="field-error">{{ err('secondarySchool') }}</p>}</label>
+              </div>
+              @if (app()!.meetsMinimumGrade === false) {
+                <p class="form-warning">{{ site.t('apply.grade_warning', 'Your mean grade is below the usual minimum for this programme. You can still apply.') }}</p>
+              }
+
+              <fieldset class="field repeat">
+                <legend class="field-label">Subject grades <small class="muted">(recommended)</small></legend>
+                @for (row of list('education', 'subjects'); track $index; let i = $index) {
+                  <div class="repeat__row">
+                    <select [name]="'subj' + i" [(ngModel)]="row['subject']" aria-label="Subject"><option value="">Subject…</option>@for (s of subjects; track s) {<option [value]="s">{{ s }}</option>}</select>
+                    <select [name]="'grade' + i" [(ngModel)]="row['grade']" aria-label="Grade"><option value="">Grade…</option>@for (g of grades; track g) {<option [value]="g">{{ g }}</option>}</select>
+                    <button type="button" class="link-btn" (click)="removeRow('education', 'subjects', i)" aria-label="Remove subject">Remove</button>
+                  </div>
+                }
+                @if (list('education', 'subjects').length < 12) {
+                  <button type="button" class="btn btn--outline btn--sm" (click)="addRow('education', 'subjects', { subject: '', grade: '' })">+ Add subject</button>
+                }
+              </fieldset>
+
+              <fieldset class="field repeat">
+                <legend class="field-label">Other qualifications <small class="muted">(certificates, diplomas)</small></legend>
+                @for (row of list('education', 'otherQualifications'); track $index; let i = $index) {
+                  <div class="repeat__row repeat__row--3">
+                    <input [name]="'inst' + i" placeholder="Institution" [(ngModel)]="row['institution']" aria-label="Institution" />
+                    <input [name]="'qual' + i" placeholder="Qualification" [(ngModel)]="row['qualification']" aria-label="Qualification" />
+                    <input [name]="'qyear' + i" type="number" placeholder="Year" [(ngModel)]="row['year']" aria-label="Year" />
+                    <button type="button" class="link-btn" (click)="removeRow('education', 'otherQualifications', i)" aria-label="Remove qualification">Remove</button>
+                  </div>
+                }
+                @if (list('education', 'otherQualifications').length < 6) {
+                  <button type="button" class="btn btn--outline btn--sm" (click)="addRow('education', 'otherQualifications', { institution: '', qualification: '', year: null })">+ Add qualification</button>
+                }
+              </fieldset>
+            }
+
+            @case ('funding') {
+              <fieldset class="field">
+                <legend class="field-label">Who will pay your fees?</legend>
+                <div class="choices">
+                  @for (f of labels.FUNDING_LABELS | keyvalue; track f.key) {
+                    <label class="choice"><input type="radio" name="funding" [value]="f.key" [(ngModel)]="forms['funding']['method']" /> {{ f.value }}</label>
+                  }
+                </div>
+              </fieldset>
+              @if (['sponsor', 'scholarship', 'bursary'].includes($any(forms['funding']['method']))) {
+                <label class="field"><span>Name of sponsor, bursary or scholarship</span><input name="sponsor" [(ngModel)]="forms['funding']['sponsorName']" /></label>
+              }
+            }
+
+            @case ('documents') {
+              <ul class="doc-list">
+                @for (t of options()?.documentTypes ?? []; track t.id) {
+                  <li class="doc" [class.doc--rejected]="docFor(t.id)?.status === 'rejected'" [class.doc--ok]="docFor(t.id) && docFor(t.id)?.status !== 'rejected'">
+                    <div class="doc__info">
+                      <strong>{{ t.name }}</strong>
+                      @if (!t.isRequired) {<span class="tag">Optional</span>}
+                      @if (t.description) {<p class="muted">{{ t.description }}</p>}
+                      <small class="muted">{{ t.accepts === 'pdf' ? 'PDF' : t.accepts === 'image' ? 'JPG or PNG photo' : 'PDF, JPG or PNG' }}, up to {{ t.maxSizeMb }} MB</small>
+                      @if (docFor(t.id); as d) {
+                        <p class="doc__file">
+                          <a [href]="fileUrl(d.id)" target="_blank" rel="noopener">{{ d.originalName }}</a> <span class="muted">({{ size(d.sizeBytes) }})</span>
+                          @if (d.status === 'rejected') {<br /><span class="field-error">Not accepted: {{ d.reviewNote }}. Please upload a new file.</span>}
+                          @if (d.status === 'accepted') {<br /><span class="ok">Accepted</span>}
+                        </p>
+                      }
+                    </div>
+                    <div class="doc__actions">
+                      <label class="btn btn--sm" [class.btn--primary]="!docFor(t.id)" [class.btn--outline]="docFor(t.id)">
+                        {{ uploading() === t.id ? 'Uploading…' : docFor(t.id) ? 'Replace' : 'Upload' }}
+                        <input type="file" [accept]="accept(t.accepts)" (change)="upload(t.id, $event)" hidden />
+                      </label>
+                      @if (docFor(t.id); as d) {
+                        <button type="button" class="link-btn" (click)="removeDoc(d.id)">Remove</button>
+                      }
+                    </div>
+                  </li>
+                }
+              </ul>
+            }
+
+            @case ('review') {
+              @if (app(); as a) {
+                <div class="review">
+                  @for (s of steps.slice(0, 6); track s.key; let i = $index) {
+                    <div class="review__row" [class.review__row--missing]="!a.completion.sections[s.key]">
+                      <span>{{ a.completion.sections[s.key] ? '✓' : '!' }} {{ site.t('apply.step.' + s.textKey, s.fallback) }}</span>
+                      <button type="button" class="link-btn" (click)="goTo(i)">{{ a.completion.sections[s.key] ? 'Edit' : 'Complete' }}</button>
+                    </div>
+                  }
+                </div>
+                @if (forms['programme']['programmeId']) {
+                  <p>You are applying for <strong>{{ programmeName(forms['programme']['programmeId']) }}</strong> ({{ labels.STUDY_MODE_LABELS[$any(forms['programme']['studyMode'])] }}), {{ intakeName(forms['programme']['intakeId']) }} intake.</p>
+                }
+                @if (feeText()) {
+                  <div class="fee-note">
+                    <strong>Application fee: {{ feeText() }}</strong>
+                    <p>Payment instructions appear on the next screen after you submit.</p>
+                  </div>
+                }
+                @if (issues().length) {
+                  <div class="form-error"><ul>@for (i of issues(); track i) {<li>{{ i }}</li>}</ul></div>
+                }
+                <label class="declaration">
+                  <input type="checkbox" name="declaration" [(ngModel)]="declaration" />
+                  <span>{{ declarationText() }}</span>
+                </label>
+              }
+            }
+          }
+
+          <div class="step-actions">
+            @if (step() > 0) {
+              <button type="button" class="btn btn--outline" (click)="back()" [disabled]="busy()">← Back</button>
+            }
+            <span class="spacer"></span>
+            @if (currentStep().key === 'review') {
+              <button type="button" class="btn btn--accent btn--lg" (click)="submit()" [disabled]="busy() || !declaration || !app()!.completion.ready">
+                {{ busy() ? 'Submitting…' : app()!.status === 'info_requested' ? 'Submit again' : 'Submit application' }}
+              </button>
+            } @else {
+              <button type="button" class="btn btn--primary btn--lg" (click)="next()" [disabled]="busy()">{{ busy() ? 'Saving…' : 'Save and continue →' }}</button>
+            }
+          </div>
+        </div>
+      </div>
+    } @else {
+      <!-- ================= STATUS ================= -->
+      @let a = app()!;
+      @if (notice()) {
+        <p class="form-success" role="status">{{ notice() }}</p>
+      }
+      <div class="status-layout">
+        <div class="status-main">
+          <div class="status-card" [class]="'status-card--' + a.status">
+            <span class="status-badge">{{ labels.STATUS_LABELS[a.status] }}</span>
+            <h2>{{ a.programme?.name }}</h2>
+            <p class="muted">{{ a.intake?.name }} intake @if (a.submittedAt) { · Submitted {{ a.submittedAt | date: 'd MMM y' }} }</p>
+            <p>{{ statusExplanation(a.status) }}</p>
+            @if (a.status === 'info_requested') {
+              <button type="button" class="btn btn--accent" (click)="editAgain()">Update my application</button>
+            }
+            @if (a.offer; as offer) {
+              <div class="offer-box">
+                <h3>{{ site.t('apply.offer.title', 'Your offer of admission') }}</h3>
+                @if (offer.canRespond) {
+                  <p>Please respond by <strong>{{ offer.acceptBy | date: 'd MMMM y' }}</strong>.</p>
+                } @else if (a.status === 'offered') {
+                  <p class="form-warning">The deadline to respond was {{ offer.acceptBy | date: 'd MMMM y' }}. Please contact the admissions office.</p>
+                }
+                <div class="offer-actions">
+                  <a class="btn btn--outline" [href]="letterUrl()" target="_blank" rel="noopener">{{ site.t('apply.offer.letter_button', 'Download offer letter (PDF)') }}</a>
+                  @if (offer.canRespond) {
+                    <button type="button" class="btn btn--accent" (click)="respondToOffer(true)">{{ site.t('apply.offer.accept_button', 'Accept my place') }}</button>
+                    <button type="button" class="link-btn decline" (click)="respondToOffer(false)">{{ site.t('apply.offer.decline_button', 'Decline offer') }}</button>
+                  }
+                  @if (a.studentPortalUrl) {
+                    <a class="btn btn--accent" [href]="a.studentPortalUrl" target="_blank" rel="noopener">{{ site.t('apply.offer.portal_button', 'Go to the student portal') }} ↗</a>
+                  }
+                </div>
+              </div>
+            }
+            @if (a.status === 'withdrawn' || a.status === 'rejected' || a.status === 'declined') {
+              <button type="button" class="btn btn--primary" (click)="startNew()">Start a new application</button>
+            }
+          </div>
+
+          <h3>Messages and updates</h3>
+          <ol class="timeline-list">
+            @for (m of a.messages; track m.id) {
+              <li [class.from-me]="m.type === 'applicant_reply'">
+                <span class="muted">{{ m.createdAt | date: 'd MMM y, HH:mm' }} · {{ m.type === 'applicant_reply' ? 'You' : 'Admissions' }}</span>
+                @if (m.toStatus) {<strong>{{ labels.STATUS_LABELS[m.toStatus] }}</strong>}
+                @if (m.message) {<p>{{ m.message }}</p>}
+              </li>
+            } @empty {
+              <li class="muted">No messages yet.</li>
+            }
+          </ol>
+          @if (a.status !== 'withdrawn') {
+            <form class="reply" (ngSubmit)="sendReply()">
+              <label class="field"><span>Send a message to admissions</span><textarea name="reply" maxlength="2000" [(ngModel)]="reply"></textarea></label>
+              <button type="submit" class="btn btn--outline" [disabled]="!reply.trim()">Send message</button>
+            </form>
+          }
+        </div>
+
+        <aside class="status-side">
+          @if (a.fee; as fee) {
+            <div class="side-card fee-card">
+              <h3>Application fee</h3>
+              <p class="fee-amount">{{ feeText() }}</p>
+              <p class="fee-status">Status: <strong>{{ labels.FEE_LABELS[fee.status] }}</strong></p>
+              @if (fee.status !== 'verified') {
+                <p>{{ fee.instructions }}</p>
+                <dl class="pay-details">
+                  @if (paybill()) {<div><dt>Paybill</dt><dd>{{ paybill() }}</dd></div>}
+                  <div><dt>Account number</dt><dd>{{ a.applicationNumber }}</dd></div>
+                  <div><dt>Amount</dt><dd>{{ feeText() }}</dd></div>
+                </dl>
+                <form class="form-stack" (ngSubmit)="sendFee()">
+                  <label class="field"><span>M-Pesa confirmation code</span><input name="ref" maxlength="12" placeholder="e.g. SGH7K2L9QX" [(ngModel)]="feeReference" /></label>
+                  <button type="submit" class="btn btn--primary btn--sm" [disabled]="feeReference.trim().length < 10">{{ fee.status === 'claimed' ? 'Update code' : 'Send code' }}</button>
+                  @if (fee.reference) {<small class="muted">Code sent: {{ fee.reference }}. We will confirm it shortly.</small>}
+                </form>
+              }
+            </div>
+          }
+          <div class="side-card">
+            <h3>Your documents</h3>
+            <ul class="mini-docs">
+              @for (d of a.documents; track d.id) {
+                <li><a [href]="fileUrl(d.id)" target="_blank" rel="noopener">{{ d.documentType }}</a> <span [class]="'doc-status doc-status--' + d.status">{{ d.status === 'pending' ? 'Received' : d.status === 'accepted' ? 'Accepted' : 'Not accepted' }}</span></li>
+              }
+            </ul>
+          </div>
+          @if (a.status === 'submitted' || a.status === 'under_review' || a.status === 'info_requested') {
+            <button type="button" class="link-btn withdraw" (click)="withdraw()">Withdraw application</button>
+          }
+        </aside>
+      </div>
+    }
+  </div>
+</section>

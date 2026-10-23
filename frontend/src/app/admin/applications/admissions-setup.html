@@ -1,0 +1,242 @@
+<div class="a-toolbar a-toolbar--spread head">
+  <h1>Admissions setup</h1>
+  <a routerLink="/admin/settings" class="a-small">Fee, declaration and welcome text are in Site settings → Admissions</a>
+</div>
+@if (notice()) {
+  <div class="a-alert a-alert--success" role="status">{{ notice() }}</div>
+}
+@if (error() && !editing()) {
+  <div class="a-alert a-alert--error" role="alert">{{ error() }}</div>
+}
+
+<div class="pipeline" role="tablist">
+  @if (tabs.includes('programmes')) {
+    <button type="button" role="tab" class="chip" [class.chip--on]="tab() === 'programmes'" (click)="tab.set('programmes')">Programmes <b>{{ programmes().length }}</b></button>
+  }
+  @if (tabs.includes('shortCourses')) {
+    <button type="button" role="tab" class="chip" [class.chip--on]="tab() === 'shortCourses'" (click)="tab.set('shortCourses')">Short courses <b>{{ shortCourses().length }}</b></button>
+  }
+  @if (tabs.includes('intakes')) {
+    <button type="button" role="tab" class="chip" [class.chip--on]="tab() === 'intakes'" (click)="tab.set('intakes')">Intakes <b>{{ intakes().length }}</b></button>
+  }
+  @if (tabs.includes('documents')) {
+    <button type="button" role="tab" class="chip" [class.chip--on]="tab() === 'documents'" (click)="tab.set('documents')">Required documents <b>{{ docTypes().length }}</b></button>
+  }
+</div>
+
+@switch (tab()) {
+  @case ('programmes') {
+    <div class="a-toolbar a-toolbar--spread filters">
+      <p class="a-muted a-small">Inactive programmes are hidden from applicants but kept for existing applications.</p>
+      @if (can('programmes', 'create')) {
+        <button class="a-btn a-btn--primary" type="button" (click)="newRow('programmes')">+ New programme</button>
+      }
+    </div>
+    <div class="a-table-wrap">
+      <table class="a-table">
+        <thead><tr><th>Programme</th><th>Level</th><th>Course area</th><th>Study modes</th><th>Min. grade</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          @for (p of programmes(); track p.id) {
+            <tr>
+              <td><strong>{{ p.name }}</strong><div class="a-small a-muted">{{ p.code }} @if (p.duration) { · {{ p.duration }} }</div></td>
+              <td>{{ levels[p.level] }}</td>
+              <td>{{ p.school }}</td>
+              <td class="a-small">@for (m of p.studyModes; track m; let last = $last) {{{ modes[m] }}@if (!last) {, }}</td>
+              <td>{{ p.minMeanGrade ?? '—' }}</td>
+              <td><span class="a-badge" [class.a-badge--live]="p.isActive">{{ p.isActive ? 'Active' : 'Hidden' }}</span></td>
+              <td><button class="a-btn a-btn--sm" type="button" (click)="edit('programmes', p)">{{ can('programmes', 'edit') ? 'Edit' : 'View' }}</button></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" class="a-empty">No programmes yet. Add the programmes applicants can choose.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @case ('shortCourses') {
+    <div class="a-toolbar a-toolbar--spread filters">
+      <p class="a-muted a-small">Shown on the website by the “Short courses” and “Programme list” page blocks. Visitors enquire rather than apply online.</p>
+      @if (can('shortCourses', 'create')) {
+        <button class="a-btn a-btn--primary" type="button" (click)="newRow('shortCourses')">+ New short course</button>
+      }
+    </div>
+    <div class="a-table-wrap">
+      <table class="a-table">
+        <thead><tr><th>Course</th><th>Category</th><th>Duration</th><th>Fee</th><th>Next start</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          @for (c of shortCourses(); track c.id) {
+            <tr>
+              <td><strong>{{ c.title }}</strong><div class="a-small a-muted">{{ delivery[c.delivery] }} @if (c.schedule) { · {{ c.schedule }} }</div></td>
+              <td>{{ c.category || '—' }}</td>
+              <td>{{ c.duration ?? '—' }}</td>
+              <td>{{ c.fee ?? '—' }}</td>
+              <td>{{ c.nextStartOn ? (c.nextStartOn | date: 'd MMM y') : '—' }}</td>
+              <td><span class="a-badge" [class.a-badge--live]="c.isActive">{{ c.isActive ? 'Shown' : 'Hidden' }}</span></td>
+              <td><button class="a-btn a-btn--sm" type="button" (click)="edit('shortCourses', c)">{{ can('shortCourses', 'edit') ? 'Edit' : 'View' }}</button></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="7" class="a-empty">No short courses yet. Add as many as you offer.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @case ('intakes') {
+    <div class="a-toolbar a-toolbar--spread filters">
+      <p class="a-muted a-small">Applicants can only choose intakes that are open today.</p>
+      @if (can('intakes', 'create')) {
+        <button class="a-btn a-btn--primary" type="button" (click)="newRow('intakes')">+ New intake</button>
+      }
+    </div>
+    <div class="a-table-wrap">
+      <table class="a-table">
+        <thead><tr><th>Intake</th><th>Applications open</th><th>Applications close</th><th>Classes start</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          @for (i of intakes(); track i.id) {
+            <tr>
+              <td><strong>{{ i.name }}</strong></td>
+              <td>{{ i.opensAt | date: 'd MMM y, HH:mm' }}</td>
+              <td>{{ i.closesAt | date: 'd MMM y, HH:mm' }}</td>
+              <td>{{ i.startsOn ? (i.startsOn | date: 'd MMM y') : '—' }}</td>
+              <td><span class="a-badge" [class.a-badge--live]="isOpen(i)">{{ isOpen(i) ? 'Open now' : i.isActive ? 'Not open' : 'Hidden' }}</span></td>
+              <td><button class="a-btn a-btn--sm" type="button" (click)="edit('intakes', i)">{{ can('intakes', 'edit') ? 'Edit' : 'View' }}</button></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="a-empty">No intakes yet.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  @case ('documents') {
+    <div class="a-toolbar a-toolbar--spread filters">
+      <p class="a-muted a-small">Documents applicants upload on the Documents step.</p>
+      @if (can('documents', 'create')) {
+        <button class="a-btn a-btn--primary" type="button" (click)="newRow('documents')">+ New document</button>
+      }
+    </div>
+    <div class="a-table-wrap">
+      <table class="a-table">
+        <thead><tr><th>Document</th><th>Required</th><th>File types</th><th>Max size</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+          @for (d of docTypes(); track d.id) {
+            <tr>
+              <td><strong>{{ d.name }}</strong><div class="a-small a-muted">{{ d.description }}</div></td>
+              <td>{{ d.isRequired ? 'Required' : 'Optional' }}</td>
+              <td>{{ d.accepts === 'pdf' ? 'PDF only' : d.accepts === 'image' ? 'Photo only' : 'PDF or photo' }}</td>
+              <td>{{ d.maxSizeMb }} MB</td>
+              <td><span class="a-badge" [class.a-badge--live]="d.isActive">{{ d.isActive ? 'Active' : 'Hidden' }}</span></td>
+              <td><button class="a-btn a-btn--sm" type="button" (click)="edit('documents', d)">{{ can('documents', 'edit') ? 'Edit' : 'View' }}</button></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="a-empty">No required documents yet.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}
+
+@if (editing(); as e) {
+  <div class="a-modal-backdrop" (click)="editing.set(null)">
+    <form class="a-modal a-stack" role="dialog" aria-modal="true" aria-label="Edit" (click)="$event.stopPropagation()" (ngSubmit)="save()">
+      <h2>{{ !e.row.id ? 'New' : canWrite(e) ? 'Edit' : 'View' }} {{ noun[e.kind] }}</h2>
+      @if (error()) {
+        <div class="a-alert a-alert--error" role="alert">{{ error() }}</div>
+      }
+      @if (!canWrite(e)) {
+        <p class="a-alert a-alert--info">View only: your role cannot change {{ noun[e.kind] }}s.</p>
+      }
+      <fieldset class="plain a-stack" [disabled]="!canWrite(e)">
+      @switch (e.kind) {
+        @case ('programmes') {
+          <div class="a-row">
+            <label class="a-field"><span>Code</span><input class="a-input" name="code" maxlength="30" required [(ngModel)]="e.row['code']" /></label>
+            <label class="a-field"><span>Level</span>
+              <select class="a-select" name="level" [(ngModel)]="e.row['level']">@for (l of levelKeys; track l) {<option [value]="l">{{ levels[l] }}</option>}</select>
+            </label>
+          </div>
+          <label class="a-field"><span>Name</span><input class="a-input" name="name" maxlength="200" required [(ngModel)]="e.row['name']" /></label>
+          <div class="a-row">
+            <label class="a-field"><span>Course area</span><input class="a-input" name="school" maxlength="150" required placeholder="e.g. Business &amp; Management" [(ngModel)]="e.row['school']" /></label>
+            <label class="a-field"><span>Duration</span><input class="a-input" name="duration" maxlength="60" placeholder="e.g. 2 years" [(ngModel)]="e.row['duration']" /></label>
+          </div>
+          <fieldset class="a-field">
+            <legend class="a-label">Study modes offered</legend>
+            <div class="a-toolbar">
+              @for (m of modeKeys; track m) {
+                <label class="a-check"><input type="checkbox" [checked]="hasMode(e.row, m)" (change)="toggleMode(e.row, m, $any($event.target).checked)" /> {{ modes[m] }}</label>
+              }
+            </div>
+          </fieldset>
+          <div class="a-row">
+            <label class="a-field"><span>Minimum KCSE mean grade</span>
+              <select class="a-select" name="grade" [(ngModel)]="e.row['minMeanGrade']"><option [ngValue]="null">None</option>@for (g of grades; track g) {<option [ngValue]="g">{{ g }}</option>}</select>
+              <span class="a-help">Applicants below this are warned and flagged, not blocked.</span>
+            </label>
+            <label class="a-field"><span>Order in lists</span><input class="a-input" type="number" name="sort" min="0" [(ngModel)]="e.row['sortOrder']" /></label>
+          </div>
+          <label class="a-field"><span>Short description</span><textarea class="a-textarea" name="desc" maxlength="2000" [(ngModel)]="e.row['description']"></textarea></label>
+          <label class="a-check"><input type="checkbox" name="active" [(ngModel)]="e.row['isActive']" /> Applicants can choose this programme</label>
+        }
+        @case ('shortCourses') {
+          <label class="a-field"><span>Course title</span><input class="a-input" name="title" maxlength="200" required placeholder="e.g. Computer Packages" [(ngModel)]="e.row['title']" /></label>
+          <div class="a-row">
+            <label class="a-field"><span>Category</span><input class="a-input" name="category" maxlength="100" placeholder="e.g. ICT" list="course-categories" [(ngModel)]="e.row['category']" /></label>
+            <label class="a-field"><span>How it is taught</span>
+              <select class="a-select" name="delivery" [(ngModel)]="e.row['delivery']">@for (d of deliveryKeys; track d) {<option [value]="d">{{ delivery[d] }}</option>}</select>
+            </label>
+          </div>
+          <datalist id="course-categories">@for (cat of categories(); track cat) {<option [value]="cat"></option>}</datalist>
+          <label class="a-field"><span>Summary</span><textarea class="a-textarea" name="summary" maxlength="500" placeholder="One or two sentences on what students learn." [(ngModel)]="e.row['summary']"></textarea></label>
+          <div class="a-row">
+            <label class="a-field"><span>Duration</span><input class="a-input" name="duration" maxlength="60" placeholder="e.g. 6 weeks" [(ngModel)]="e.row['duration']" /></label>
+            <label class="a-field"><span>Fee</span><input class="a-input" name="fee" maxlength="60" placeholder="e.g. KSh 15,000" [(ngModel)]="e.row['fee']" /></label>
+          </div>
+          <div class="a-row">
+            <label class="a-field"><span>Schedule</span><input class="a-input" name="schedule" maxlength="150" placeholder="e.g. Saturdays, 9am–1pm" [(ngModel)]="e.row['schedule']" /></label>
+            <label class="a-field"><span>Next class starts <small class="a-muted">(hidden once past)</small></span><input class="a-input" type="date" name="nextStart" [(ngModel)]="e.row['nextStartOn']" /></label>
+          </div>
+          <div class="a-field"><span class="a-label">Photo</span><app-media-field [(value)]="$any(e.row)['imageId']" kind="image" /></div>
+          <label class="a-field"><span>Order in lists</span><input class="a-input" type="number" name="sort" min="0" [(ngModel)]="e.row['sortOrder']" /></label>
+          <label class="a-check"><input type="checkbox" name="active" [(ngModel)]="e.row['isActive']" /> Show on the website</label>
+        }
+        @case ('intakes') {
+          <label class="a-field"><span>Name</span><input class="a-input" name="name" maxlength="100" required placeholder="e.g. September 2027" [(ngModel)]="e.row['name']" /></label>
+          <div class="a-row">
+            <label class="a-field"><span>Applications open</span><input class="a-input" type="datetime-local" name="opens" required [(ngModel)]="e.row['opensAt']" /></label>
+            <label class="a-field"><span>Applications close</span><input class="a-input" type="datetime-local" name="closes" required [(ngModel)]="e.row['closesAt']" /></label>
+          </div>
+          <label class="a-field"><span>Classes start (optional)</span><input class="a-input" type="date" name="starts" [(ngModel)]="e.row['startsOn']" /></label>
+          <label class="a-check"><input type="checkbox" name="active" [(ngModel)]="e.row['isActive']" /> Show this intake</label>
+        }
+        @case ('documents') {
+          <label class="a-field"><span>Name</span><input class="a-input" name="name" maxlength="150" required [(ngModel)]="e.row['name']" /></label>
+          <label class="a-field"><span>Guidance for applicants</span><textarea class="a-textarea" name="desc" maxlength="500" [(ngModel)]="e.row['description']"></textarea></label>
+          <div class="a-row">
+            <label class="a-field"><span>File types</span>
+              <select class="a-select" name="accepts" [(ngModel)]="e.row['accepts']"><option value="any">PDF or photo</option><option value="pdf">PDF only</option><option value="image">Photo only</option></select>
+            </label>
+            <label class="a-field"><span>Maximum size (MB)</span><input class="a-input" type="number" name="max" min="1" max="20" [(ngModel)]="e.row['maxSizeMb']" /></label>
+            <label class="a-field"><span>Order</span><input class="a-input" type="number" name="sort" min="0" [(ngModel)]="e.row['sortOrder']" /></label>
+          </div>
+          <label class="a-check"><input type="checkbox" name="required" [(ngModel)]="e.row['isRequired']" /> Required before submitting</label>
+          <label class="a-check"><input type="checkbox" name="active" [(ngModel)]="e.row['isActive']" /> Ask applicants for this document</label>
+        }
+      }
+      </fieldset>
+      <div class="a-toolbar">
+        @if (canWrite(e)) {
+          <button class="a-btn a-btn--primary" type="submit">Save</button>
+        }
+        <button class="a-btn" type="button" (click)="editing.set(null)">{{ canWrite(e) ? 'Cancel' : 'Close' }}</button>
+        @if (e.row.id && can(e.kind, 'delete')) {
+          <button class="a-btn a-btn--danger" type="button" (click)="remove(e.kind, e.row)">Delete</button>
+        }
+      </div>
+    </form>
+  </div>
+}

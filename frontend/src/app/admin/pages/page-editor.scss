@@ -1,0 +1,52 @@
+.editor-head { margin-bottom: 1rem; }
+.editor-head h1 { margin: 0.25rem 0; }
+.title-wrap { min-width: 0; }
+.more { position: relative; }
+.more summary { list-style: none; }
+.more summary::-webkit-details-marker { display: none; }
+.more__menu { position: absolute; right: 0; top: calc(100% + 0.3rem); z-index: 20; background: #fff; border: 1px solid var(--a-line); border-radius: 8px; padding: 0.4rem; display: grid; gap: 0.3rem; min-width: 12rem; box-shadow: 0 8px 24px rgb(0 0 0 / 0.12); }
+
+.editor { display: grid; gap: 1.25rem; grid-template-columns: minmax(22rem, 34rem) 1fr; align-items: start; }
+@media (max-width: 1100px) { .editor { grid-template-columns: 1fr; } }
+.editor__form { background: #fff; border: 1px solid var(--a-line); border-radius: 10px; padding: 1rem; min-width: 0; }
+
+.tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid var(--a-line); margin: -0.25rem -0.25rem 1rem; }
+.tabs button { background: none; border: 0; font: inherit; font-weight: 650; padding: 0.6rem 0.8rem; color: var(--a-muted); border-bottom: 3px solid transparent; cursor: pointer; }
+.tabs button[aria-selected='true'] { color: var(--a-primary); border-bottom-color: var(--a-primary); }
+
+.page-title { margin-bottom: 0.75rem; }
+.blocks { list-style: none; margin: 0; padding: 0; }
+.block { border: 1px solid var(--a-line); border-radius: 8px; background: #fff; }
+.block--hidden { opacity: 0.6; border-style: dashed; }
+.block--error { border-color: var(--a-danger); box-shadow: 0 0 0 1px var(--a-danger); }
+.block__head { display: flex; gap: 0.4rem; align-items: center; padding: 0.4rem 0.4rem 0.4rem 0.2rem; flex-wrap: wrap; }
+.block__toggle { flex: 1 1 10rem; min-width: 0; display: grid; text-align: left; background: none; border: 0; font: inherit; padding: 0.3rem 0.5rem; cursor: pointer; }
+.block__toggle span { font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.block__tools { display: flex; gap: 0.25rem; flex-wrap: wrap; }
+.block__body { padding: 0.75rem 0.9rem 1rem; border-top: 1px solid var(--a-line); background: #fcfcfd; border-radius: 0 0 8px 8px; }
+
+.adder { display: grid; place-items: center; padding: 0.15rem 0; }
+.adder__btn { width: 1.6rem; height: 1.6rem; border-radius: 50%; border: 1px dashed #b7c0ca; background: #fff; color: var(--a-muted); cursor: pointer; opacity: 0.6; }
+.adder__btn:hover, .adder__btn:focus-visible { opacity: 1; border-color: var(--a-primary); color: var(--a-primary); }
+.adder--last { padding-top: 0.75rem; }
+.palette { width: 100%; border: 1px solid var(--a-primary); border-radius: 8px; padding: 0.75rem; background: #f7faff; margin: 0.35rem 0; }
+.palette ul { list-style: none; padding: 0; margin: 0.6rem 0 0; display: grid; gap: 0.35rem; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); }
+.palette li button { width: 100%; height: 100%; text-align: left; display: grid; gap: 0.15rem; padding: 0.55rem 0.65rem; border: 1px solid var(--a-line); border-radius: 7px; background: #fff; font: inherit; cursor: pointer; }
+.palette li button:hover, .palette li button:focus-visible { border-color: var(--a-primary); }
+.palette li span { font-size: 0.8rem; color: var(--a-muted); }
+
+.settings h2 { margin: 0.25rem 0 0; }
+.seo-head { margin-top: 1rem !important; padding-top: 1rem; border-top: 1px solid var(--a-line); }
+
+.history { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.5rem; }
+.history li { display: flex; justify-content: space-between; gap: 1rem; align-items: center; padding: 0.6rem 0.75rem; border: 1px solid var(--a-line); border-radius: 8px; }
+
+.editor__preview { position: sticky; top: 1rem; min-width: 0; }
+.preview-bar { margin-bottom: 0.5rem; }
+.frame { background: #fff; border: 1px solid var(--a-line); border-radius: 10px; overflow: hidden; height: calc(100vh - 9rem); overflow-y: auto; }
+.frame--mobile { width: 390px; max-width: 100%; margin-inline: auto; border-width: 10px; border-color: #1d2530; border-radius: 28px; }
+/* The preview uses the real public styles; reset admin font size inside it. */
+.public-preview { font-size: 1.0625rem; line-height: 1.65; container-type: inline-size; }
+
+.langs { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-bottom: 0.75rem; }
+.langs__state { font-weight: 400; opacity: 0.8; }

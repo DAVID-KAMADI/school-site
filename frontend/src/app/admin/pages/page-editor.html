@@ -1,0 +1,333 @@
+@if (page(); as p) {
+  <div class="editor-head">
+    <a routerLink="/admin/pages" class="a-small">← All pages</a>
+    <div class="a-toolbar a-toolbar--spread">
+      <div class="title-wrap">
+        <h1>{{ p.title }}</h1>
+        <div class="a-toolbar a-small">
+          @if (translation(); as t) {
+          <span class="a-muted">{{ t.path }}</span>
+          <span class="a-badge">{{ t.name }}</span>
+          @if (t.isLive) {
+            <span class="a-badge a-badge--live">Live</span>
+          } @else {
+            <span class="a-badge">Not published</span>
+          }
+          @if (t.hasUnpublishedChanges) {
+            <span class="a-badge a-badge--changes">Unpublished changes</span>
+          }
+          @if (dirty()) {
+            <span class="a-badge a-badge--review">Unsaved</span>
+          }
+          } @else {
+          <span class="a-muted">{{ p.path }}</span>
+          @if (p.isLive) {
+            <span class="a-badge a-badge--live">Live (revision {{ p.publishedRevision }})</span>
+          } @else {
+            <span class="a-badge">Not published</span>
+          }
+          @if (p.hasUnpublishedChanges) {
+            <span class="a-badge a-badge--changes">Unpublished changes</span>
+          }
+          @if (p.status === 'in_review') {
+            <span class="a-badge a-badge--review">Waiting for approval</span>
+          }
+          @if (dirty()) {
+            <span class="a-badge a-badge--review">Unsaved</span>
+          }
+          }
+        </div>
+      </div>
+      <div class="a-toolbar">
+        <button class="a-btn" type="button" (click)="save()" [disabled]="busy()" title="Ctrl+S">{{ busy() ? 'Saving…' : 'Save draft' }}</button>
+        @if (translation(); as t) {
+          @if (t.canPublish) {
+            <button class="a-btn a-btn--success" type="button" (click)="publish()" [disabled]="busy()">Publish {{ t.name }}</button>
+          }
+        } @else if (p.canPublish) {
+          <button class="a-btn a-btn--success" type="button" (click)="publish()" [disabled]="busy()">Publish</button>
+        } @else {
+          <button class="a-btn a-btn--primary" type="button" (click)="submit()" [disabled]="busy() || p.status === 'in_review'">Send for approval</button>
+        }
+        <details class="more">
+          <summary class="a-btn">More</summary>
+          <div class="more__menu">
+            @if (translation(); as t) {
+            @if (t.isLive) {
+              <a class="a-btn a-btn--sm" [href]="t.path" target="_blank" rel="noopener">View live page</a>
+            }
+            <button class="a-btn a-btn--sm" type="button" (click)="copyFromEnglish()">Start again from English</button>
+            @if (t.canPublish && t.isLive) {
+              <button class="a-btn a-btn--sm" type="button" (click)="unpublish()">Unpublish {{ t.name }}</button>
+            }
+            @if (p.canDelete && t.exists) {
+              <button class="a-btn a-btn--sm a-btn--danger" type="button" (click)="deleteTranslation()">Delete {{ t.name }} version</button>
+            }
+            } @else {
+            @if (p.isLive) {
+              <a class="a-btn a-btn--sm" [href]="p.path" target="_blank" rel="noopener">View live page</a>
+            }
+            <button class="a-btn a-btn--sm" type="button" (click)="previewLink()">Copy preview link</button>
+            <button class="a-btn a-btn--sm" type="button" (click)="duplicatePage()">Duplicate page</button>
+            @if (p.canPublish && p.isLive) {
+              <button class="a-btn a-btn--sm" type="button" (click)="unpublish()">Unpublish</button>
+            }
+            @if (p.canDelete && !p.isHome) {
+              <button class="a-btn a-btn--sm a-btn--danger" type="button" (click)="trashPage()">Move to trash</button>
+            }
+            }
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  @if (lockedBy(); as l) {
+    <div class="a-alert a-alert--warning">{{ l.name }} is also editing this page. Saving may overwrite their changes.</div>
+  }
+  @if (message(); as m) {
+    <div class="a-alert" [class]="'a-alert--' + m.kind" role="status">
+      {{ m.text }}
+      @if (m.list?.length) {
+        <ul>
+          @for (item of m.list; track $index) {
+            <li>{{ item }}</li>
+          }
+        </ul>
+      }
+    </div>
+  }
+
+  @if (translations().length) {
+    <div class="langs" role="group" aria-label="Language">
+      <span class="a-small a-muted">Language:</span>
+      <button type="button" class="a-btn a-btn--sm" [class.a-btn--primary]="lang() === 'en'" [attr.aria-pressed]="lang() === 'en'" (click)="switchLanguage('en')">English</button>
+      @for (l of translations(); track l.locale) {
+        <button type="button" class="a-btn a-btn--sm" [class.a-btn--primary]="lang() === l.locale" [attr.aria-pressed]="lang() === l.locale" (click)="switchLanguage(l.locale)">
+          {{ l.name }}
+          <span class="langs__state">{{ l.isLive ? (l.hasUnpublishedChanges ? '· changes' : '· live') : l.exists ? '· draft' : '· not translated' }}</span>
+        </button>
+      }
+    </div>
+  }
+
+  @if (translation(); as t) {
+    <div class="a-alert a-alert--info">
+      You are editing the <strong>{{ t.name }}</strong> version of this page. Translate the words in each block; layout, address and permissions come from the English page.
+      @if (!t.exists) {
+        It starts as a copy of the English page. Nothing is saved until you click Save draft.
+      }
+    </div>
+    @if (t.englishChanged) {
+      <div class="a-alert a-alert--warning">The English page has changed since this translation was last saved. Check whether the {{ t.name }} version needs the same changes.</div>
+    }
+  }
+
+  <div class="editor">
+    <section class="editor__form">
+      <div class="tabs" role="tablist">
+        <button role="tab" type="button" [attr.aria-selected]="tab() === 'content'" (click)="tab.set('content')">Content</button>
+        <button role="tab" type="button" [attr.aria-selected]="tab() === 'settings'" (click)="tab.set('settings')">{{ translation() ? 'Search engines' : 'Page settings' }}</button>
+        @if (!translation()) {
+          <button role="tab" type="button" [attr.aria-selected]="tab() === 'history'" (click)="showHistory()">History</button>
+        }
+      </div>
+
+      @switch (tab()) {
+        @case ('content') {
+          <label class="a-field page-title">
+            <span>Page title</span>
+            <input class="a-input" [(ngModel)]="title" (ngModelChange)="touch()" maxlength="200" required />
+          </label>
+
+          <ol class="blocks">
+            @for (b of blocks(); track b.uid; let i = $index; let first = $first; let last = $last) {
+              <li class="adder">
+                @if (palette() === i) {
+                  <ng-container *ngTemplateOutlet="paletteTpl; context: { $implicit: i }" />
+                } @else {
+                  <button type="button" class="adder__btn" (click)="palette.set(i)" aria-label="Add a block here">+</button>
+                }
+              </li>
+              <li class="block" [class.block--hidden]="b.isHidden" [class.block--error]="blockErrors()[i]">
+                <div class="block__head">
+                  <button type="button" class="block__toggle" [attr.aria-expanded]="isExpanded(b.uid)" (click)="toggle(b.uid)">
+                    <strong>{{ def(b.type)?.label ?? b.type }}</strong>
+                    <span class="a-muted">{{ summary(b) }}</span>
+                  </button>
+                  <div class="block__tools">
+                    <button type="button" class="a-btn a-btn--sm a-btn--icon" [disabled]="first" (click)="move(i, -1)" aria-label="Move block up">↑</button>
+                    <button type="button" class="a-btn a-btn--sm a-btn--icon" [disabled]="last" (click)="move(i, 1)" aria-label="Move block down">↓</button>
+                    <button type="button" class="a-btn a-btn--sm" (click)="toggleHidden(b)">{{ b.isHidden ? 'Show' : 'Hide' }}</button>
+                    <button type="button" class="a-btn a-btn--sm" (click)="duplicate(i)">Copy</button>
+                    <button type="button" class="a-btn a-btn--sm a-btn--danger" (click)="remove(i)">Remove</button>
+                  </div>
+                </div>
+                @if (isExpanded(b.uid)) {
+                  <div class="block__body">
+                    @if (def(b.type); as d) {
+                      @if (d.fields.length) {
+                        <app-field-list [fields]="d.fields" [value]="b.content" [errors]="blockErrors()[i] ?? {}" (changed)="touch()" />
+                      } @else {
+                        <p class="a-muted a-small">This block has no settings.</p>
+                      }
+                    }
+                  </div>
+                }
+              </li>
+            }
+            <li class="adder adder--last">
+              @if (palette() === blocks().length) {
+                <ng-container *ngTemplateOutlet="paletteTpl; context: { $implicit: blocks().length }" />
+              } @else {
+                <button type="button" class="a-btn" (click)="palette.set(blocks().length)">+ Add a block</button>
+              }
+            </li>
+          </ol>
+        }
+
+        @case ('settings') {
+          @if (translation(); as t) {
+            <div class="a-stack settings">
+              <p class="a-help">Saved with the translation (Save draft), and live when you publish the {{ t.name }} version.</p>
+              <label class="a-field">
+                <span>Title in search results</span>
+                <input class="a-input" [(ngModel)]="seoTitle" (ngModelChange)="touch()" maxlength="200" [placeholder]="title" />
+              </label>
+              <label class="a-field">
+                <span>Description in search results</span>
+                <textarea class="a-textarea" [(ngModel)]="metaDescription" (ngModelChange)="touch()" maxlength="300"></textarea>
+                <span class="a-help">{{ metaDescription.length }}/160 recommended.</span>
+              </label>
+            </div>
+          } @else {
+          <div class="a-stack settings">
+            <h2>Address and placement</h2>
+            @if (p.isHome) {
+              <p class="a-muted">This is the home page. Its address is always “/”.</p>
+            } @else {
+              <label class="a-field">
+                <span>Address (last part)</span>
+                <input class="a-input" [(ngModel)]="slug" maxlength="150" pattern="[a-z0-9]+(-[a-z0-9]+)*" />
+                <span class="a-help">Lowercase letters, numbers and hyphens. Changing the address of a live page automatically redirects the old address.</span>
+              </label>
+              <label class="a-field">
+                <span>Inside</span>
+                <select class="a-select" [(ngModel)]="parentId">
+                  <option [ngValue]="null">Top level</option>
+                  @for (o of parentOptions(); track o.id) {
+                    <option [ngValue]="o.id">{{ o.title }} ({{ o.path }})</option>
+                  }
+                </select>
+              </label>
+            }
+            <label class="a-field">
+              <span>Who can see it</span>
+              <select class="a-select" [(ngModel)]="visibility">
+                <option value="public">Everyone</option>
+                <option value="applicants">Signed-in applicants only</option>
+                <option value="students">Signed-in students only</option>
+              </select>
+            </label>
+            @if (p.canPublish) {
+              <div class="a-row">
+                <label class="a-field"><span>Publish automatically at</span><input class="a-input" type="datetime-local" [(ngModel)]="publishAt" /></label>
+                <label class="a-field"><span>Take offline automatically at</span><input class="a-input" type="datetime-local" [(ngModel)]="unpublishAt" /></label>
+              </div>
+            }
+            <div><button class="a-btn a-btn--primary" type="button" (click)="saveSettings()" [disabled]="busy()">Save settings</button></div>
+
+            <h2 class="seo-head">Layout and search engines</h2>
+            <p class="a-help">These are saved with the page content (Save draft), and go live when you publish.</p>
+            <label class="a-field">
+              <span>Layout</span>
+              <select class="a-select" [(ngModel)]="template" (ngModelChange)="touch()">
+                <option value="standard">Standard (title at top)</option>
+                <option value="landing">Landing (no title bar; start with a hero)</option>
+                <option value="full_width">Full width</option>
+              </select>
+            </label>
+            <label class="a-field">
+              <span>Title in search results</span>
+              <input class="a-input" [(ngModel)]="seoTitle" (ngModelChange)="touch()" maxlength="200" [placeholder]="title" />
+            </label>
+            <label class="a-field">
+              <span>Description in search results</span>
+              <textarea class="a-textarea" [(ngModel)]="metaDescription" (ngModelChange)="touch()" maxlength="300"></textarea>
+              <span class="a-help">{{ metaDescription.length }}/160 recommended. Shown by Google and in WhatsApp/Facebook link previews.</span>
+            </label>
+            <div class="a-field">
+              <span class="a-label">Image for link previews</span>
+              <app-media-field kind="image" [(value)]="socialImageId" (valueChange)="touch()" />
+            </div>
+          </div>
+          }
+        }
+
+        @case ('history') {
+          <p class="a-muted a-small">Every save is kept. Restoring loads an old version into the editor as a new draft.</p>
+          <ul class="history">
+            @for (r of revisions(); track r.id) {
+              <li>
+                <div>
+                  <strong>Revision {{ r.revisionNumber }}</strong>
+                  @if (r.isPublished) {
+                    <span class="a-badge a-badge--live">Live</span>
+                  }
+                  <div class="a-small a-muted">{{ r.createdAt | date: 'd MMM y, HH:mm' }} · {{ r.createdBy ?? 'System' }} · {{ r.blockCount }} blocks</div>
+                  @if (r.note) {
+                    <div class="a-small">{{ r.note }}</div>
+                  }
+                </div>
+                <button class="a-btn a-btn--sm" type="button" (click)="restore(r)">Restore</button>
+              </li>
+            }
+          </ul>
+        }
+      }
+    </section>
+
+    <section class="editor__preview" aria-label="Live preview">
+      <div class="a-toolbar a-toolbar--spread preview-bar">
+        <span class="a-small a-muted">Live preview</span>
+        <div class="a-toolbar">
+          <button type="button" class="a-btn a-btn--sm" [class.a-btn--primary]="device() === 'desktop'" (click)="device.set('desktop')">Desktop</button>
+          <button type="button" class="a-btn a-btn--sm" [class.a-btn--primary]="device() === 'mobile'" (click)="device.set('mobile')">Phone</button>
+        </div>
+      </div>
+      <div class="frame" [class.frame--mobile]="device() === 'mobile'">
+        <div class="frame__inner public-preview">
+          <app-page-body [title]="previewTitle()" [template]="template" [blocks]="previewBlocks()" [media]="cacheMap()" />
+          @if (!previewBlocks().length) {
+            <p class="a-empty">Add a block to start building this page.</p>
+          }
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <ng-template #paletteTpl let-at>
+    <div class="palette">
+      <div class="a-toolbar a-toolbar--spread">
+        <strong>Add a block</strong>
+        <button type="button" class="a-btn a-btn--sm" (click)="palette.set(null)">Cancel</button>
+      </div>
+      <ul>
+        @for (d of defs; track d.type) {
+          <li>
+            <button type="button" (click)="addBlock(d, at)">
+              <strong>{{ d.label }}</strong>
+              <span>{{ d.description }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+  </ng-template>
+} @else {
+  @if (message(); as m) {
+    <div class="a-alert a-alert--error">{{ m.text }}</div>
+  } @else {
+    <p class="a-muted">Loading…</p>
+  }
+}

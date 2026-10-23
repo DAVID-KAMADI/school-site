@@ -1,0 +1,141 @@
+@for (f of fields(); track f.key) {
+  <div class="field" [class.field--error]="errorFor(f.key)">
+    @switch (f.kind) {
+      @case ('text') {
+        <label class="a-field">
+          <span>{{ f.label }}@if (f.required) {<span class="req" aria-hidden="true"> *</span>}</span>
+          <input
+            class="a-input"
+            [value]="str(f.key)"
+            [attr.maxlength]="f.max"
+            [required]="!!f.required"
+            (input)="setText(f.key, $any($event.target).value, f.key === 'videoUrl')"
+          />
+          @if (f.help) {<span class="a-help">{{ f.help }}</span>}
+        </label>
+      }
+      @case ('textarea') {
+        <label class="a-field">
+          <span>{{ f.label }}@if (f.required) {<span class="req" aria-hidden="true"> *</span>}</span>
+          <textarea class="a-textarea" [value]="str(f.key)" [attr.maxlength]="f.max" (input)="setText(f.key, $any($event.target).value)"></textarea>
+          @if (f.help) {<span class="a-help">{{ f.help }}</span>}
+        </label>
+      }
+      @case ('richtext') {
+        <div class="a-field">
+          <span class="a-label">{{ f.label }}</span>
+          <app-rich-text-editor [value]="str(f.key)" (valueChange)="set(f.key, $event)" [label]="f.label" />
+          @if (f.help) {<span class="a-help">{{ f.help }}</span>}
+        </div>
+      }
+      @case ('media') {
+        <div class="a-field">
+          <span class="a-label">{{ f.label }}@if (f.required) {<span class="req" aria-hidden="true"> *</span>}</span>
+          <app-media-field [kind]="f.accept" [value]="num(f.key)" (valueChange)="set(f.key, $event)" />
+          @if (f.help) {<span class="a-help">{{ f.help }}</span>}
+        </div>
+      }
+      @case ('mediaList') {
+        <div class="a-field">
+          <span class="a-label">{{ f.label }}</span>
+          <ol class="media-list">
+            @for (id of numList(f.key); track $index; let i = $index) {
+              <li>
+                <app-media-field kind="image" [value]="id" (valueChange)="setListItem(f.key, i, $event)" />
+              </li>
+            }
+          </ol>
+          @if (numList(f.key).length < f.max) {
+            <div><app-media-field kind="image" [value]="null" (valueChange)="addListItem(f.key, $event)" /></div>
+          }
+          @if (f.help) {<span class="a-help">{{ f.help }}</span>}
+        </div>
+      }
+      @case ('select') {
+        <label class="a-field">
+          <span>{{ f.label }}</span>
+          <select class="a-select" (change)="setSelect(f, $any($event.target).value)">
+            @for (o of f.options; track o.value) {
+              <option [value]="o.value" [selected]="get(f.key) === o.value">{{ o.label }}</option>
+            }
+          </select>
+          @if (f.help) {<span class="a-help">{{ f.help }}</span>}
+        </label>
+      }
+      @case ('checkbox') {
+        <div class="a-field">
+          <label class="a-check"><input type="checkbox" [checked]="!!get(f.key)" (change)="set(f.key, $any($event.target).checked)" /> {{ f.label }}</label>
+          @if (f.help) {<span class="a-help">{{ f.help }}</span>}
+        </div>
+      }
+      @case ('checklist') {
+        <fieldset class="a-field">
+          <legend class="a-label">{{ f.label }}</legend>
+          <div class="a-toolbar">
+            @for (o of f.options; track o.value) {
+              <label class="a-check"><input type="checkbox" [checked]="checked(f.key, o.value)" (change)="toggleChecked(f, o.value, $any($event.target).checked)" /> {{ o.label }}</label>
+            }
+          </div>
+          @if (f.help) {<span class="a-help">{{ f.help }}</span>}
+        </fieldset>
+      }
+      @case ('number') {
+        <label class="a-field">
+          <span>{{ f.label }}</span>
+          <input class="a-input" type="number" [value]="num(f.key)" [attr.min]="f.min" [attr.max]="f.max" [attr.step]="f.step" (input)="setNumber(f.key, $any($event.target).value)" />
+          @if (f.help) {<span class="a-help">{{ f.help }}</span>}
+        </label>
+      }
+      @case ('link') {
+        <fieldset class="group">
+          <legend>{{ f.label }}</legend>
+          @if (link(f.key); as l) {
+            <app-field-list
+              [fields]="linkFields"
+              [value]="l"
+              [path]="childPath(f.key)"
+              [errors]="errors()"
+              (changed)="changed.emit()"
+            />
+            <label class="a-check"><input type="checkbox" [checked]="!!l['openInNewTab']" (change)="l['openInNewTab'] = $any($event.target).checked; changed.emit()" /> Open in a new tab</label>
+            @if (f.optional) {
+              <button type="button" class="a-btn a-btn--sm a-btn--danger" (click)="toggleLink(f.key, false)">Remove {{ f.label.toLowerCase() }}</button>
+            }
+          } @else {
+            <button type="button" class="a-btn a-btn--sm" (click)="toggleLink(f.key, true)">Add {{ f.label.toLowerCase() }}</button>
+          }
+        </fieldset>
+      }
+      @case ('list') {
+        <fieldset class="group">
+          <legend>{{ f.label }}</legend>
+          <ol class="items">
+            @for (item of list(f.key); track $index; let i = $index; let last = $last; let firstItem = $first) {
+              <li class="item" [class.item--error]="hasErrorsUnder(f.key, i)">
+                <div class="item__head">
+                  <button type="button" class="item__toggle" [attr.aria-expanded]="isOpen(f.key, i)" (click)="toggleItem(f.key, i)">
+                    {{ itemTitle(f, item, i) }}
+                  </button>
+                  <button type="button" class="a-btn a-btn--sm a-btn--icon" [disabled]="firstItem" (click)="moveItem(f.key, i, -1)" [attr.aria-label]="'Move ' + f.itemLabel + ' up'">↑</button>
+                  <button type="button" class="a-btn a-btn--sm a-btn--icon" [disabled]="last" (click)="moveItem(f.key, i, 1)" [attr.aria-label]="'Move ' + f.itemLabel + ' down'">↓</button>
+                  <button type="button" class="a-btn a-btn--sm a-btn--icon a-btn--danger" [disabled]="list(f.key).length <= (f.min ?? 0)" (click)="removeItem(f.key, i)" [attr.aria-label]="'Remove ' + f.itemLabel">✕</button>
+                </div>
+                @if (isOpen(f.key, i) || hasErrorsUnder(f.key, i)) {
+                  <div class="item__body">
+                    <app-field-list [fields]="f.fields" [value]="item" [path]="childPath(f.key) + '.' + i" [errors]="errors()" (changed)="changed.emit()" />
+                  </div>
+                }
+              </li>
+            }
+          </ol>
+          @if (list(f.key).length < (f.max ?? 100)) {
+            <button type="button" class="a-btn a-btn--sm" (click)="addItem(f)">+ Add {{ f.itemLabel.toLowerCase() }}</button>
+          }
+        </fieldset>
+      }
+    }
+    @if (errorFor(f.key)) {
+      <p class="a-error" role="alert">{{ errorFor(f.key) }}</p>
+    }
+  </div>
+}

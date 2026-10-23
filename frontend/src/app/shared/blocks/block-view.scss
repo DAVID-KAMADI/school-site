@@ -1,0 +1,16 @@
+:host {
+  display: block;
+}
+
+.course-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+}
+
+.course-grid__empty {
+  color: var(--muted);
+}
