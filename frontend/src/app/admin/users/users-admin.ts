@@ -19,7 +19,7 @@ type RoleInfo = { key: string; name: string; description: string | null; permiss
         <h1>Staff users</h1>
         <p class="a-muted a-small intro">
           People who work in this admin portal. What each role may do is set in
-          @if (auth.can('access.manage') || auth.can('users.manage')) {<a routerLink="/admin/access">Access control</a>} @else {Access control}.
+          @if (auth.can('access.manage') || auth.can('users.manage')) {<a routerLink="/admin/access-control">Access control</a>} @else {Access control}.
           Applicants are not listed here@if (auth.can('applicants.manage')) {; find them in <a routerLink="/admin/applicants">Admissions → Applicants</a>}.
         </p>
       </div>
@@ -109,7 +109,7 @@ type RoleInfo = { key: string; name: string; description: string | null; permiss
                 <li><strong>{{ r.name }}</strong>: {{ r.description }}</li>
               }
             </ul>
-            <a routerLink="/admin/access">See or change each role's permissions in Access control</a>
+            <a routerLink="/admin/access-control">See or change each role's permissions in Access control</a>
           </details>
           <div class="a-toolbar">
             <button class="a-btn a-btn--primary" type="button" (click)="saveRoles(u)">Save roles</button>

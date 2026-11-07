@@ -1,5 +1,16 @@
 import type { Routes } from '@angular/router';
-import { ADMISSIONS_SETUP_PERMISSIONS, adminGuard, CONTENT_PERMISSIONS, permissionGuard } from '../core/auth';
+import { inject } from '@angular/core';
+import { Router } from '@angular/router';
+import {
+  ADMISSIONS_SETUP_PERMISSIONS,
+  adminGuard,
+  CONTENT_PERMISSIONS,
+  notFound,
+  permissionGuard,
+  signingInGuard,
+  signInLinkGuard,
+} from '../core/auth';
+import { PortalKeys } from './users/portal-keys';
 import { Account } from './account';
 import { ApplicantsList } from './applications/applicants-list';
 import { AdmissionsSetup } from './applications/admissions-setup';
@@ -35,14 +46,16 @@ export const adminRoutes: Routes = [
     path: '',
     component: AdminRoot,
     children: [
-      { path: 'login', component: AdminLogin },
-      { path: 'two-step-setup', component: TwoStepSetup },
+      // The code step of sign-in, for someone who has already entered their password.
+      { path: 'login', component: AdminLogin, canActivate: [signingInGuard] },
+      { path: 'two-step-setup', component: TwoStepSetup, canActivate: [signingInGuard] },
       {
         path: '',
         component: AdminLayout,
         canActivate: [adminGuard],
         children: [
           { path: '', pathMatch: 'full', component: Dashboard },
+          { path: 'dashboard', pathMatch: 'full', redirectTo: '' },
           { path: 'pages', component: PagesList, ...only(...CONTENT_PERMISSIONS) },
           { path: 'pages/:id', component: PageEditor, canDeactivate: [unsavedChangesGuard], ...only(...CONTENT_PERMISSIONS) },
           { path: 'blog', component: BlogList, ...only(...CONTENT_PERMISSIONS) },
@@ -60,12 +73,16 @@ export const adminRoutes: Routes = [
           { path: 'text', component: TextEditor, ...only('text_strings.edit') },
           { path: 'redirects', component: RedirectsEditor, ...only('redirects.edit') },
           { path: 'users', component: UsersAdmin, ...only('users.manage') },
-          { path: 'access', component: AccessControl, ...only('access.manage', 'users.manage') },
+          { path: 'access-control', component: AccessControl, ...only('access.manage', 'users.manage') },
+          { path: 'access-management', component: PortalKeys, ...only('portal_keys.manage') },
           { path: 'audit', component: AuditLog, ...only('audit.view') },
           { path: 'account', component: Account },
           { path: 'no-access', component: NoAccess },
         ],
       },
+      // Staff sign-in, only through a personal sign-in link: /admin/<token>. Without one, /admin shows "page not found".
+      { path: ':token', component: AdminLogin, canActivate: [signInLinkGuard] },
+      { path: '**', component: AdminLogin, canActivate: [() => notFound(inject(Router))] },
     ],
   },
 ];

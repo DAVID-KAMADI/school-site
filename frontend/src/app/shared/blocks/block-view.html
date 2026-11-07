@@ -4,10 +4,12 @@
       class="hero"
       [class]="'hero--' + (c()['height'] ?? 'full')"
       [class.hero--center]="c()['align'] === 'center'"
-      [class.hero--image]="heroSlides().length || c()['videoUrl']"
+      [class.hero--image]="heroSlides().length || heroVideo() || c()['videoUrl']"
     >
-      @if (heroSlides().length) {
-        <div class="hero__media"><app-hero-slideshow [slides]="heroSlides()" /></div>
+      @if (heroSlides().length || heroVideo()) {
+        <div class="hero__media">
+          <app-hero-slideshow [slides]="heroSlides()" [video]="heroVideo()" [startWith]="c()['startWith'] ?? 'video'" />
+        </div>
       }
       <div class="container hero__inner">
         @if (c()['eyebrow']) {
@@ -28,7 +30,7 @@
           <div class="hero__video"><app-video-embed [url]="c()['videoUrl']" [title]="c()['heading']" /></div>
         }
       </div>
-      @if (heroSlides().length && c()['height'] === 'full') {
+      @if ((heroSlides().length || heroVideo()) && c()['height'] === 'full') {
         <a class="hero__scroll" href="#after-hero" aria-label="Scroll to content"><span></span></a>
       }
     </section>

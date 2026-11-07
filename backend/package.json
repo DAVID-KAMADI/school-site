@@ -25,6 +25,7 @@
     "migration:run": "nest build && typeorm migration:run -d dist/database/data-source.js",
     "migration:revert": "nest build && typeorm migration:revert -d dist/database/data-source.js",
     "create-admin": "nest build && node dist/cli/create-admin.js",
+    "portal-key": "nest build && node dist/cli/portal-key.js",
     "seed:demo": "nest build && node dist/cli/seed-demo.js",
     "seed:legal": "nest build && node dist/cli/seed-legal.js",
     "seed:timetable-demo": "nest build && node dist/cli/seed-timetable-demo.js",

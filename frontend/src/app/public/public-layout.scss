@@ -1,5 +1,7 @@
 :host { display: flex; flex-direction: column; min-height: 100vh; }
 main { flex: 1; outline: none; }
+/* A "page not found" on its own: centred in the window, with nothing else on the page. */
+.main--bare { display: grid; align-content: center; min-height: 100vh; min-height: 100dvh; }
 
 .alert-banner { color: #fff; background: var(--action); font-size: 0.95rem; }
 .alert-banner--warning { background: var(--warning); }
@@ -20,8 +22,8 @@ main { flex: 1; outline: none; }
 .site-header { position: sticky; top: 0; z-index: 50; background: var(--primary); color: #fff; box-shadow: 0 2px 10px rgb(0 26 92 / 0.25); }
 .site-header__inner { display: flex; align-items: center; gap: 1.5rem; min-height: 4.5rem; }
 .brand { display: flex; align-items: center; text-decoration: none; margin-right: auto; }
-.brand__logo { display: block; height: 3rem; width: auto; }
-.brand__logo ::ng-deep img { object-fit: contain; height: 3rem; width: auto; }
+.brand__logo { display: block; height: 3.75rem; width: auto; }
+.brand__logo ::ng-deep img { object-fit: contain; height: 3.75rem; width: auto; }
 .brand__name { font-weight: 700; font-size: 1.25rem; line-height: 1.2; color: #fff; letter-spacing: -0.01em; max-width: 20ch; }
 .brand__name--short { display: none; }
 @media (max-width: 1000px) { .brand__name { font-size: 1.1rem; } }
@@ -49,11 +51,46 @@ main { flex: 1; outline: none; }
 .main-nav__toggle[aria-expanded='true']::after { rotate: 225deg; translate: 0 2px; }
 .main-nav__actions { display: flex; gap: 0.5rem; }
 
-.submenu { display: none; list-style: none; margin: 0; padding: 0.5rem; position: absolute; top: calc(100% + 0.4rem); left: 0; min-width: 16rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
-.submenu--open { display: block; }
-.submenu ::ng-deep .submenu__link { display: block; padding: 0.55rem 0.75rem; border-radius: var(--radius-sm); color: var(--ink); text-decoration: none; }
-.submenu ::ng-deep .submenu__link:hover { background: var(--surface-2); color: var(--action); }
-.submenu ::ng-deep .submenu__link--overview { font-weight: 700; }
+/* Drop-down menus: a card that fades and rises into place under its link, with a pointer and an orange top edge.
+   Kept in the page (only hidden) so closing animates too; the padding above the card bridges the gap for the mouse. */
+.submenu {
+  position: absolute; z-index: 60; top: 100%; left: -0.5rem; padding-top: 0.7rem; min-width: 17.5rem;
+  visibility: hidden; opacity: 0; transform: translateY(10px); pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 0.3s;
+}
+.submenu--open { visibility: visible; opacity: 1; transform: none; pointer-events: auto; transition-delay: 0s; }
+.submenu__panel {
+  position: relative; list-style: none; margin: 0; padding: 0.5rem;
+  background: var(--surface); border: 1px solid rgb(0 26 92 / 0.08); border-radius: 14px;
+  box-shadow: inset 0 3px 0 var(--accent), 0 2px 6px rgb(16 24 40 / 0.06), 0 22px 50px -14px rgb(0 26 92 / 0.4);
+}
+/* The pointer up to the menu link. */
+.submenu__panel::before {
+  content: ''; position: absolute; top: -6px; left: 1.6rem; width: 12px; height: 12px;
+  background: var(--accent); border-radius: 2px 0 0 0; rotate: 45deg;
+}
+.submenu__item { position: relative; }
+.submenu ::ng-deep .submenu__link {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 0.65rem 0.85rem; border-radius: 10px; color: var(--ink); font-weight: 500; text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+/* A small arrow that slides in on hover. */
+.submenu ::ng-deep .submenu__link::after {
+  content: ''; flex: none; width: 0.42rem; height: 0.42rem; border-top: 2px solid currentColor; border-right: 2px solid currentColor;
+  rotate: 45deg; opacity: 0; translate: -6px 0; transition: opacity 0.2s ease, translate 0.25s ease;
+}
+.submenu ::ng-deep .submenu__link:hover, .submenu ::ng-deep .submenu__link:focus-visible { background: var(--surface-2); color: var(--action); }
+.submenu ::ng-deep .submenu__link:hover::after, .submenu ::ng-deep .submenu__link:focus-visible::after { opacity: 1; translate: 0 0; }
+.submenu ::ng-deep .submenu__link--overview { margin-bottom: 0.3rem; font-weight: 700; color: var(--primary); }
+.submenu ::ng-deep .submenu__link--overview::after { opacity: 0.6; translate: 0 0; }
+.submenu__item:first-child::after { content: ''; position: absolute; left: 0.85rem; right: 0.85rem; bottom: 0.1rem; height: 1px; background: var(--line); }
+/* The links follow the card in, one after another. */
+.main-nav--animated .submenu--open .submenu__item { animation: submenu-item 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: calc(var(--j, 0) * 35ms + 60ms); }
+@keyframes submenu-item { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .submenu, .submenu ::ng-deep .submenu__link, .submenu ::ng-deep .submenu__link::after { transition: none; }
+}
 
 @media (max-width: 1000px) {
   .menu-toggle { display: inline-flex; }
@@ -65,9 +102,17 @@ main { flex: 1; outline: none; }
   }
   .main-nav__list { flex-direction: column; }
   .main-nav__link, .main-nav ::ng-deep .main-nav__link { width: 100%; justify-content: space-between; padding: 0.8rem 0.5rem; }
-  .submenu { position: static; box-shadow: none; border: 0; padding: 0 0 0.5rem 0.75rem; min-width: 0; background: transparent; }
-  .submenu ::ng-deep .submenu__link { color: #e3eaf7; }
-  .submenu ::ng-deep .submenu__link:hover { background: rgb(255 255 255 / 0.12); color: #fff; }
+  /* Phone menu: the sub-links slide open beneath their heading like an accordion. */
+  .submenu {
+    position: static; display: grid; grid-template-rows: 0fr; padding: 0; min-width: 0; transform: none;
+    transition: grid-template-rows 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, visibility 0s linear 0.3s;
+  }
+  .submenu--open { grid-template-rows: 1fr; }
+  .submenu__panel { min-height: 0; overflow: hidden; margin: 0 0 0 0.5rem; padding: 0 0 0 0.75rem; background: transparent; border: 0; border-left: 2px solid rgb(255 255 255 / 0.2); border-radius: 0; box-shadow: none; }
+  .submenu--open .submenu__panel { margin-block: 0.25rem 0.6rem; }
+  .submenu__panel::before, .submenu__item:first-child::after { display: none; }
+  .submenu ::ng-deep .submenu__link, .submenu ::ng-deep .submenu__link--overview { color: #e3eaf7; }
+  .submenu ::ng-deep .submenu__link:hover, .submenu ::ng-deep .submenu__link:focus-visible { background: rgb(255 255 255 / 0.12); color: #fff; }
   .main-nav__actions { flex-direction: column; }
   .main-nav__actions ::ng-deep .btn { width: 100%; }
 }
@@ -75,6 +120,162 @@ main { flex: 1; outline: none; }
 .intake-banner { background: var(--accent); color: var(--on-accent); }
 .intake-banner__inner { display: flex; flex-wrap: wrap; gap: 0.75rem 1.5rem; align-items: center; justify-content: space-between; padding-block: 0.75rem; }
 .intake-banner p { margin: 0; font-weight: 650; }
+
+/* Intake pop-up: a split card, photo on the left with a live "Applications open" badge, message and call to action on the right. */
+.intake-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: clamp(0.75rem, 3vw, 2rem);
+  background: radial-gradient(120% 100% at 50% 0%, rgb(0 38 128 / 0.55), rgb(0 13 46 / 0.82));
+  backdrop-filter: blur(6px) saturate(120%);
+}
+.intake-popup {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  width: min(100%, 56rem);
+  max-height: min(92vh, 40rem);
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: calc(var(--radius) + 8px);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.12), 0 32px 90px -12px rgb(0 10 40 / 0.55);
+  isolation: isolate;
+}
+/* Brand stripe along the top edge. */
+.intake-popup::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  height: 5px;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--action) 45%, var(--accent) 100%);
+}
+
+.intake-popup__media { position: relative; min-height: 26rem; overflow: hidden; background: var(--surface-3); }
+.intake-popup__media app-media-image { position: absolute; inset: 0; }
+.intake-popup__media::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(0 26 92 / 0) 45%, rgb(0 26 92 / 0.55) 100%);
+  pointer-events: none;
+}
+.intake-popup__badge {
+  position: absolute;
+  z-index: 1;
+  left: 1.1rem;
+  bottom: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.95rem 0.5rem 0.8rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.94);
+  color: var(--primary-strong);
+  font-size: 0.85rem;
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.2);
+}
+.intake-popup__pulse { position: relative; width: 0.6rem; height: 0.6rem; border-radius: 50%; background: var(--success); }
+.intake-popup__pulse::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: inherit; }
+
+.intake-popup__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding: clamp(2rem, 4.5vw, 3.25rem) clamp(1.5rem, 4vw, 3rem);
+}
+.intake-popup__content > * { margin: 0; }
+.intake-popup__eyebrow {
+  display: inline-flex;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  background: rgb(239 109 0 / 0.12);
+  color: var(--accent-text);
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.intake-popup__content h2 { color: var(--primary); font-size: clamp(1.75rem, 3.2vw, 2.6rem); font-weight: 750; line-height: 1.08; letter-spacing: -0.02em; text-wrap: balance; }
+.intake-popup__details { color: var(--text); font-size: 1.02rem; line-height: 1.7; white-space: pre-line; overflow-wrap: anywhere; }
+.intake-popup__deadline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+.intake-popup__deadline svg { flex: none; width: 1.15rem; height: 1.15rem; fill: none; stroke: var(--action); stroke-width: 2; stroke-linecap: round; }
+
+.intake-popup__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.25rem; margin-top: 0.5rem; }
+.intake-popup__cta { gap: 0.6rem; box-shadow: 0 10px 24px -8px rgb(239 109 0 / 0.65); }
+.intake-popup__cta svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.2s ease; }
+.intake-popup__cta:hover svg { transform: translateX(3px); }
+.intake-popup__later { padding: 0.4rem 0.2rem; border: 0; background: none; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; text-decoration-color: transparent; text-underline-offset: 0.25em; transition: color 0.15s ease, text-decoration-color 0.15s ease; }
+.intake-popup__later:hover { color: var(--ink); text-decoration-color: currentColor; }
+
+.intake-popup__close {
+  position: absolute;
+  z-index: 3;
+  top: 0.9rem;
+  right: 0.9rem;
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.92);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.2s ease;
+}
+.intake-popup__close:hover { background: var(--surface-3); transform: rotate(90deg); }
+.intake-popup__close svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
+
+@media (max-width: 760px) {
+  .intake-popup { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); width: min(100%, 32rem); max-height: 92vh; }
+  .intake-popup__media { min-height: 0; height: clamp(11rem, 34vh, 17rem); }
+  .intake-popup__content { gap: 0.8rem; padding: 1.5rem 1.35rem 1.6rem; }
+  .intake-popup__actions { width: 100%; }
+  .intake-popup__cta { flex: 1 1 auto; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .intake-popup-backdrop { animation: intake-popup-fade 0.3s ease-out both; }
+  .intake-popup { animation: intake-popup-enter 0.55s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .intake-popup__media app-media-image { animation: intake-popup-zoom 7s ease-out both; }
+  .intake-popup__content > * { animation: intake-popup-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+  .intake-popup__content > :nth-child(1) { animation-delay: 0.15s; }
+  .intake-popup__content > :nth-child(2) { animation-delay: 0.22s; }
+  .intake-popup__content > :nth-child(3) { animation-delay: 0.29s; }
+  .intake-popup__content > :nth-child(4) { animation-delay: 0.36s; }
+  .intake-popup__content > :nth-child(5) { animation-delay: 0.43s; }
+  .intake-popup__badge { animation: intake-popup-rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.4s both; }
+  .intake-popup__pulse::after { animation: intake-popup-pulse 1.8s ease-out infinite; }
+  .intake-popup-backdrop.is-leaving { animation: intake-popup-fade 0.26s ease-in reverse both; }
+  .intake-popup-backdrop.is-leaving .intake-popup { animation: intake-popup-leave 0.26s ease-in both; }
+}
+@keyframes intake-popup-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes intake-popup-enter { from { opacity: 0; transform: translateY(1.5rem) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes intake-popup-leave { to { opacity: 0; transform: translateY(0.75rem) scale(0.97); } }
+@keyframes intake-popup-rise { from { opacity: 0; transform: translateY(0.6rem); } to { opacity: 1; transform: none; } }
+@keyframes intake-popup-zoom { from { transform: scale(1.12); } to { transform: scale(1); } }
+@keyframes intake-popup-pulse { 0% { transform: scale(1); opacity: 0.7; } 100% { transform: scale(3); opacity: 0; } }
 
 .site-footer { background: var(--primary-deep); color: #c3cfe6; margin-top: 0; padding-top: 3.5rem; font-size: 0.95rem; }
 .site-footer a, .site-footer ::ng-deep a { color: #e1e7ee; text-decoration: none; }
@@ -99,12 +300,13 @@ address { font-style: normal; display: grid; gap: 0.3rem; }
 .site-header--scrolled { box-shadow: 0 6px 24px rgb(0 26 92 / 0.35); }
 @media (min-width: 1001px) {
   .main-nav__link, .main-nav ::ng-deep .main-nav__link { position: relative; }
-  .main-nav ::ng-deep .main-nav__link::after, .main-nav__toggle::before {
+  /* Links only: a menu's toggle button keeps its ::after for the chevron. */
+  .main-nav ::ng-deep a.main-nav__link::after, .main-nav__toggle::before {
     content: ''; position: absolute; left: 0.75rem; right: 0.75rem; bottom: 0.3rem; height: 2px;
     background: var(--accent); transform: scaleX(0); transform-origin: left; transition: transform 0.3s ease;
   }
-  .main-nav ::ng-deep .main-nav__link:hover::after, .main-nav__toggle:hover::before { transform: scaleX(1); }
+  .main-nav ::ng-deep a.main-nav__link:hover::after, .main-nav__toggle:hover::before, .main-nav__toggle[aria-expanded='true']::before { transform: scaleX(1); }
+  .main-nav__toggle::before { right: 1.75rem; }
   .main-nav ::ng-deep a.main-nav__link:hover { background: transparent; }
 }
-.submenu--open { animation: drop-in 0.2s ease both; }
 @keyframes drop-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }

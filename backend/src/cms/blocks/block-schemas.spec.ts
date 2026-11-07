@@ -18,6 +18,8 @@ describe('block schemas', () => {
       buttons: [],
       align: 'left',
       slides: [],
+      videoId: null,
+      startWith: 'video',
       height: 'full',
     });
   });

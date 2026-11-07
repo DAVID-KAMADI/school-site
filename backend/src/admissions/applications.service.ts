@@ -10,7 +10,12 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
 import sharp from 'sharp';
-import { Brackets, DataSource, type Repository } from 'typeorm';
+import {
+  Brackets,
+  DataSource,
+  type EntityManager,
+  type Repository,
+} from 'typeorm';
 import { AuditService } from '../audit/audit.service.js';
 import { withDeadlockRetry } from '../database/retry.js';
 import { AdmissionsConfigService } from './admissions-config.service.js';
@@ -121,48 +126,69 @@ export class ApplicationsService {
 
   /** The applicant's most recent application (any status), creating a draft the first time. */
   async current(userId: number): Promise<Application> {
-    const latest = await this.apps.findOne({
+    const latest = await this.latest(userId);
+    if (latest) return latest;
+    // Two tabs (or a refresh) opening the portal at the same moment must not each create a draft.
+    await this.withApplicantLock(userId, async (em) => {
+      if (!(await em.exists(Application, { where: { applicant: { id: userId } } })))
+        await em.save(
+          em.create(Application, {
+            applicant: { id: userId },
+            status: ApplicationStatus.Draft,
+          }),
+        );
+    });
+    return (await this.latest(userId))!;
+  }
+
+  private latest(userId: number) {
+    return this.apps.findOne({
       where: { applicant: { id: userId } },
       order: { createdAt: 'DESC', id: 'DESC' },
       relations: { programme: true, intake: true, documents: true },
     });
-    if (latest) return latest;
-    const created = await this.apps.save(
-      this.apps.create({
-        applicant: { id: userId },
-        status: ApplicationStatus.Draft,
+  }
+
+  /**
+   * Runs `work` in a transaction holding a lock on the applicant's account row, so requests from the same
+   * applicant that check and then create something (a draft, a new application) take turns.
+   */
+  private withApplicantLock<T>(
+    userId: number,
+    work: (em: EntityManager) => Promise<T>,
+  ): Promise<T> {
+    return withDeadlockRetry(() =>
+      this.dataSource.transaction(async (em) => {
+        await em.query('SELECT id FROM users WHERE id = ? FOR UPDATE', [
+          userId,
+        ]);
+        return work(em);
       }),
     );
-    return this.load(created.id);
   }
 
   /** Starts a fresh application after the previous one was withdrawn or not successful. */
   async startNew(userId: number) {
-    const latest = await this.current(userId);
-    if (!CLOSED.has(latest.status)) {
-      throw new ConflictException(
-        'You already have an application in progress.',
+    await this.current(userId);
+    // Checked again under the lock: a double-click must not start two new applications.
+    await this.withApplicantLock(userId, async (em) => {
+      const latest = await em.findOne(Application, {
+        where: { applicant: { id: userId } },
+        order: { createdAt: 'DESC', id: 'DESC' },
+      });
+      if (latest && !CLOSED.has(latest.status)) {
+        throw new ConflictException(
+          'You already have an application in progress.',
+        );
+      }
+      await em.save(
+        em.create(Application, {
+          applicant: { id: userId },
+          status: ApplicationStatus.Draft,
+        }),
       );
-    }
-    await this.apps.save(
-      this.apps.create({
-        applicant: { id: userId },
-        status: ApplicationStatus.Draft,
-      }),
-    );
-    return this.applicantView(userId);
-  }
-
-  private load(id: number) {
-    return this.apps.findOneOrFail({
-      where: { id },
-      relations: {
-        programme: true,
-        intake: true,
-        documents: true,
-        applicant: true,
-      },
     });
+    return this.applicantView(userId);
   }
 
   /** What the applicant sees: answers, documents, progress, fee and visible messages. */
@@ -428,22 +454,41 @@ export class ApplicationsService {
     const storageKey = `applications/${app.id}/${randomUUID()}.${kind === 'pdf' ? 'pdf' : 'jpg'}`;
     await this.storage.put(storageKey, data);
 
-    // One current file per document type: replacing removes the previous upload.
-    const previous = app.documents.filter((d) => d.documentType.id === type.id);
-    await this.docs.save(
-      this.docs.create({
-        application: { id: app.id },
-        documentType: type,
-        originalName: file.originalname.slice(0, 255),
-        storageKey,
-        mimeType: kind === 'pdf' ? 'application/pdf' : 'image/jpeg',
-        sizeBytes: data.length,
-      }),
-    );
-    for (const p of previous) {
-      await this.docs.delete(p.id);
-      await this.storage.remove(p.storageKey);
+    // One current file per document type: replacing removes the previous upload. The application row is
+    // locked while swapping, so two uploads arriving together (a double-click) leave one file, not two.
+    let replaced: string[];
+    try {
+      replaced = await withDeadlockRetry(() =>
+        this.dataSource.transaction(async (em) => {
+          await em.query('SELECT id FROM applications WHERE id = ? FOR UPDATE', [
+            app.id,
+          ]);
+          const previous = await em.find(ApplicationDocument, {
+            where: { application: { id: app.id }, documentType: { id: type.id } },
+          });
+          await em.save(
+            em.create(ApplicationDocument, {
+              application: { id: app.id },
+              documentType: type,
+              originalName: file.originalname.slice(0, 255),
+              storageKey,
+              mimeType: kind === 'pdf' ? 'application/pdf' : 'image/jpeg',
+              sizeBytes: data.length,
+            }),
+          );
+          if (previous.length)
+            await em.delete(
+              ApplicationDocument,
+              previous.map((p) => p.id),
+            );
+          return previous.map((p) => p.storageKey);
+        }),
+      );
+    } catch (err) {
+      await this.storage.remove(storageKey);
+      throw err;
     }
+    for (const key of replaced) await this.storage.remove(key);
     return this.applicantView(userId);
   }
 
@@ -481,6 +526,13 @@ export class ApplicationsService {
   /** Submits (or re-submits after a request for information). Everything must be complete. */
   async submit(userId: number, declarationAccepted: boolean) {
     const app = await this.current(userId);
+    // A repeated press (double-click, a retry on a bad connection, a second tab) after the application has
+    // gone in: answer with the application as it stands rather than an error.
+    if (
+      app.status === ApplicationStatus.Submitted ||
+      app.status === ApplicationStatus.UnderReview
+    )
+      return this.applicantView(userId);
     this.assertEditable(app);
     if (!declarationAccepted)
       throw new BadRequestException(
@@ -521,8 +573,14 @@ export class ApplicationsService {
       ? ApplicationStatus.UnderReview
       : ApplicationStatus.Submitted;
     const prefix = await this.config.setting('admissions.number_prefix', 'APP');
-    await withDeadlockRetry(() =>
+    const changed = await withDeadlockRetry(() =>
       this.dataSource.transaction(async (em) => {
+        // Only the first of two simultaneous presses changes the status and records "received".
+        const [row]: { status: ApplicationStatus }[] = await em.query(
+          'SELECT status FROM applications WHERE id = ? FOR UPDATE',
+          [app.id],
+        );
+        if (row?.status !== app.status) return false;
         await em.update(Application, app.id, {
           status: to,
           declarationAcceptedAt: new Date(),
@@ -544,14 +602,16 @@ export class ApplicationsService {
             actor: { id: userId },
           }),
         );
+        return true;
       }),
     );
-    await this.audit.record({
-      action: resubmission ? 'application.resubmit' : 'application.submit',
-      userId,
-      entityType: 'application',
-      entityId: app.id,
-    });
+    if (changed)
+      await this.audit.record({
+        action: resubmission ? 'application.resubmit' : 'application.submit',
+        userId,
+        entityType: 'application',
+        entityId: app.id,
+      });
     return this.applicantView(userId);
   }
 
@@ -908,13 +968,6 @@ export class ApplicationsService {
     actorId: number,
     canDecide: boolean,
   ) {
-    const app = await this.apps.findOneBy({ id });
-    if (!app || app.status === ApplicationStatus.Draft)
-      throw new NotFoundException('Application not found.');
-    if (!TRANSITIONS[app.status]?.to.includes(to))
-      throw new BadRequestException(
-        `An application that is "${app.status}" cannot be moved to "${to}".`,
-      );
     if (DECISIONS.has(to) && !canDecide)
       throw new ForbiddenException(
         'Only staff who can make admission decisions may offer or reject.',
@@ -923,26 +976,48 @@ export class ApplicationsService {
       throw new BadRequestException(
         'Write a message to the applicant explaining this.',
       );
-    await this.apps.update(id, {
-      status: to,
-      decidedAt: DECISIONS.has(to) ? new Date() : app.decidedAt,
-    });
-    await this.addEvent(
-      id,
-      actorId,
-      'status',
-      message?.trim() || null,
-      true,
-      app.status,
-      to,
+    // The status is read and changed while the row is locked, so two staff pressing the same button at
+    // the same moment change it (and tell the applicant) once; the second is shown the result.
+    const from = await withDeadlockRetry(() =>
+      this.dataSource.transaction(async (em) => {
+        const [row]: { status: ApplicationStatus; decided_at: Date | null }[] =
+          await em.query(
+            'SELECT status, decided_at FROM applications WHERE id = ? FOR UPDATE',
+            [id],
+          );
+        if (!row || row.status === ApplicationStatus.Draft)
+          throw new NotFoundException('Application not found.');
+        if (row.status === to) return null;
+        if (!TRANSITIONS[row.status]?.to.includes(to))
+          throw new BadRequestException(
+            `An application that is "${row.status}" cannot be moved to "${to}".`,
+          );
+        await em.update(Application, id, {
+          status: to,
+          decidedAt: DECISIONS.has(to) ? new Date() : row.decided_at,
+        });
+        await em.save(
+          em.create(ApplicationEvent, {
+            application: { id },
+            type: 'status',
+            message: message?.trim() || null,
+            visibleToApplicant: true,
+            fromStatus: row.status,
+            toStatus: to,
+            actor: { id: actorId },
+          }),
+        );
+        return row.status;
+      }),
     );
-    await this.audit.record({
-      action: 'application.status',
-      userId: actorId,
-      entityType: 'application',
-      entityId: id,
-      details: { from: app.status, to },
-    });
+    if (from)
+      await this.audit.record({
+        action: 'application.status',
+        userId: actorId,
+        entityType: 'application',
+        entityId: id,
+        details: { from, to },
+      });
     return this.staffView(id);
   }
 

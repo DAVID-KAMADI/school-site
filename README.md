@@ -192,6 +192,7 @@ The API will not start with `NODE_ENV=production` while any of these are unsafe.
 - New random secrets. Never reuse the training ones:
   - `TOTP_ENCRYPTION_KEY`: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"`
   - `PREVIEW_LINK_SECRET`: 32+ random characters
+  - `WEBSITE_SERVER_SECRET`: 32+ random characters, set to the **same value** on the website server below. It lets the website server tell the API each visitor's real address, so rate limits and sign-in limits count per visitor instead of treating everyone as one.
 - `TOTP_ISSUER=<Institution name>`
 
 **Website server (`frontend`, run `node dist/frontend/server/server.mjs`)**
@@ -200,7 +201,9 @@ The API will not start with `NODE_ENV=production` while any of these are unsafe.
 - `PORT`
 - `API_ORIGIN=http://127.0.0.1:3000` (where the API listens)
 - `TRUST_PROXY=1`
+- `WEBSITE_SERVER_SECRET`: the same value as in the API settings (the website server will not start in production without it)
 - `NG_ALLOWED_HOSTS=<real domain>,www.<real domain>`
+- `WEB_WORKERS=auto`: one page-rendering process per CPU core, minus one for the API. One process uses only one core and slows down past about 50 visitors at once. Leave it unset when running under PM2 cluster mode, which does the same.
 
 **Server**
 

@@ -89,6 +89,11 @@ export interface IntakeRow {
   closesAt: string;
   startsOn: string | null;
   isActive: boolean;
+  popupEnabled: boolean;
+  popupTitle: string | null;
+  popupDetails: string | null;
+  popupImageId: number | null;
+  popupImage: MediaView | null;
 }
 
 export interface DocumentTypeRow {

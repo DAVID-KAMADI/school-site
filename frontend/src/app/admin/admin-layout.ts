@@ -54,7 +54,8 @@ const NAV: { heading: string; items: NavItem[] }[] = [
     heading: 'System',
     items: [
       { label: 'Staff users', path: '/admin/users', permission: 'users.manage', icon: 'users' },
-      { label: 'Access control', path: '/admin/access', permission: ['access.manage', 'users.manage'], icon: 'shield' },
+      { label: 'Access control', path: '/admin/access-control', permission: ['access.manage', 'users.manage'], icon: 'shield' },
+      { label: 'Staff sign-in links', path: '/admin/access-management', permission: 'portal_keys.manage', icon: 'key' },
       { label: 'Audit log', path: '/admin/audit', permission: 'audit.view', icon: 'shield' },
     ],
   },
@@ -71,11 +72,6 @@ const roleLabel = (key: string) => key.charAt(0).toUpperCase() + key.slice(1).re
     <div class="shell">
       <aside class="side" [class.side--open]="navOpen()" id="admin-nav">
         <a routerLink="/admin" class="brand" (click)="navOpen.set(false)">
-          @if (logo(); as l) {
-            <img class="brand__logo" [src]="l.url" alt="" width="48" height="48" />
-          } @else {
-            <span class="brand__mark" aria-hidden="true">{{ initials(site.institutionName() || 'Admin') }}</span>
-          }
           <span class="brand__text">
             <strong>{{ site.institutionName() || 'Website' }}</strong>
             <small>Admin portal</small>
@@ -137,8 +133,6 @@ const roleLabel = (key: string) => key.charAt(0).toUpperCase() + key.slice(1).re
       background: linear-gradient(180deg, var(--a-navy) 0%, #00144a 100%); color: #c5d1e8;
     }
     .brand { display: flex; align-items: center; gap: 0.7rem; padding: 0.35rem 0.5rem 1rem; margin-bottom: 0.25rem; border-bottom: 1px solid rgb(255 255 255 / 0.08); text-decoration: none; color: #fff; }
-    .brand__logo { width: 48px; height: 48px; object-fit: contain; background: #fff; border-radius: 11px; padding: 4px; flex: none; }
-    .brand__mark { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 11px; background: var(--a-accent); color: #1d1206; font-weight: 800; font-size: 1.1rem; flex: none; }
     .brand__text { display: grid; gap: 0.1rem; line-height: 1.2; min-width: 0; }
     .brand__text strong { font-size: 1rem; line-height: 1.2; overflow-wrap: anywhere; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
     .brand__text small { color: #93a4c4; font-size: 0.8rem; }
@@ -207,7 +201,6 @@ export class AdminLayout {
   protected readonly groups = computed(() =>
     NAV.map((g) => ({ ...g, items: g.items.filter((i) => this.auth.canAny(typeof i.permission === 'string' ? [i.permission] : i.permission)) })).filter((g) => g.items.length),
   );
-  protected readonly logo = computed(() => this.site.media(this.site.setting('institution.logo_media_id')));
   protected readonly role = computed(() => {
     const roles = this.auth.user()?.roles ?? [];
     return roles.length ? roles.map(roleLabel).join(', ') : 'Staff';
@@ -230,6 +223,6 @@ export class AdminLayout {
 
   async logout() {
     await this.auth.logout();
-    await this.router.navigateByUrl('/admin/login');
+    await this.router.navigateByUrl('/');
   }
 }

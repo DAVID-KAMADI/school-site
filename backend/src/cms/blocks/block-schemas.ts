@@ -61,6 +61,10 @@ export const BLOCK_SCHEMAS = {
     align: z.enum(['left', 'center']).default('left'),
     /** Extra photos that crossfade after the main photo (slideshow). */
     slides: z.array(mediaId).max(6).default([]),
+    /** Uploaded MP4/WebM that plays muted behind the headline. */
+    videoId: mediaId.nullable().default(null),
+    /** What visitors see first when both a video and photos are set; they can switch either way. */
+    startWith: z.enum(['video', 'slideshow']).default('video'),
     height: z.enum(['full', 'medium', 'short']).default('full'),
   }),
   rich_text: z.object({ html: richText, background }),
@@ -298,7 +302,8 @@ export function validateBlocks(
   return out;
 }
 
-/** Every media id referenced anywhere in a block's content, with the field path (for "where used"). */
+/** Fields that hold a single media id. */
+const MEDIA_ID_FIELDS = new Set(['mediaId', 'videoId']);
 /** Fields that hold a list of media ids rather than objects with a mediaId. */
 const MEDIA_ID_LISTS = new Set(['slides']);
 
@@ -311,7 +316,7 @@ export function collectMediaRefs(
     return content.flatMap((item, i) => collectMediaRefs(item, `${path}.${i}`));
   if (content && typeof content === 'object') {
     return Object.entries(content).flatMap(([key, value]) => {
-      if (key === 'mediaId' && typeof value === 'number')
+      if (MEDIA_ID_FIELDS.has(key) && typeof value === 'number')
         return [{ mediaId: value, fieldPath: `${path}.${key}` }];
       if (MEDIA_ID_LISTS.has(key) && Array.isArray(value)) {
         return value

@@ -9,7 +9,11 @@ import {
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
-import { authConfig, SESSION_COOKIE } from '../config/auth.config.js';
+import {
+  authConfig,
+  SESSION_COOKIE,
+} from '../config/auth.config.js';
+import { portalCookies } from './portal-access.controller.js';
 import { AuthService, type RequestMeta } from './auth.service.js';
 import { isStaff, type RequestAuth } from './auth-user.js';
 import {
@@ -55,7 +59,12 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const result = await this.auth.login(dto.email, dto.password, meta(req));
+    const result = await this.auth.login(
+      dto.email,
+      dto.password,
+      meta(req),
+      portalCookies(req),
+    );
     res.cookie(SESSION_COOKIE, result.token, {
       httpOnly: true,
       sameSite: 'lax',

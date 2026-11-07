@@ -6,3 +6,7 @@ coverage/
 database/setup-local.sql
 *.log
 ~$*.docx
+
+# Load test output (synthetic accounts and their test passwords, generated files)
+loadtest/results/
+loadtest/fixtures/

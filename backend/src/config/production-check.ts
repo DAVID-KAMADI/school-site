@@ -25,6 +25,19 @@ export function productionCheck(env: NodeJS.ProcessEnv = process.env): {
     errors.push('TOTP_ENCRYPTION_KEY must be 32 random bytes, base64 encoded.');
   if ((env.PREVIEW_LINK_SECRET ?? '').length < 32)
     errors.push('PREVIEW_LINK_SECRET must be at least 32 characters.');
+  if ((env.PORTAL_KEY_SECRET ?? '').length < 32 || env.PORTAL_KEY_SECRET === env.PREVIEW_LINK_SECRET)
+    errors.push(
+      'PORTAL_KEY_SECRET must be at least 32 random characters, different from PREVIEW_LINK_SECRET.',
+    );
+
+  const website = env.WEBSITE_SERVER_SECRET ?? '';
+  if (
+    website.length < 32 ||
+    [env.PREVIEW_LINK_SECRET, env.PORTAL_KEY_SECRET].includes(website)
+  )
+    errors.push(
+      'WEBSITE_SERVER_SECRET must be at least 32 random characters, different from the other secrets, and the same on the website server (otherwise every visitor shares one rate limit).',
+    );
 
   const origin = env.FRONTEND_ORIGIN ?? '';
   if (!origin.startsWith('https://'))

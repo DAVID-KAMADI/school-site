@@ -2,11 +2,12 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Component, DOCUMENT, PLATFORM_ID, RESPONSE_INIT, computed, effect, inject, input } from '@angular/core';
 import { isPlatformServer } from '@angular/common';
 import { Meta, Title } from '@angular/platform-browser';
-import { RedirectCommand, Router, RouterLink, type ResolveFn } from '@angular/router';
+import { RedirectCommand, Router, type ResolveFn } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import type { PublicPage } from '../core/models';
 import { SiteStore } from '../core/site';
 import { PageBody } from '../shared/page-body';
+import { NotFound } from './not-found';
 
 export type PageResult =
   | { kind: 'page'; data: PublicPage }
@@ -48,7 +49,7 @@ export const cmsPageResolver: ResolveFn<PageResult | RedirectCommand> = async (_
 
 @Component({
   selector: 'app-cms-page',
-  imports: [PageBody, RouterLink],
+  imports: [PageBody, NotFound],
   template: `
     @switch (result().kind) {
       @case ('page') {
@@ -71,16 +72,14 @@ export const cmsPageResolver: ResolveFn<PageResult | RedirectCommand> = async (_
         }
       }
       @case ('not_found') {
-        <section class="container container--text status-page">
-          @if (isHome()) {
+        @if (isHome()) {
+          <section class="container container--text status-page">
             <h1>Welcome</h1>
             <p>This website is being set up. Content will appear here once the home page is published.</p>
-          } @else {
-            <h1>{{ site.t('error.not_found_title', 'Page not found') }}</h1>
-            <p>{{ site.t('error.not_found_text', 'The page you are looking for may have moved.') }}</p>
-            <a [routerLink]="site.localize('/')" class="btn btn--primary">Go to the home page</a>
-          }
-        </section>
+          </section>
+        } @else {
+          <app-not-found />
+        }
       }
       @case ('sign_in_required') {
         <section class="container container--text status-page">

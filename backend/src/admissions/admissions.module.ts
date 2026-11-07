@@ -7,6 +7,7 @@ import { IdentityModule } from '../identity/identity.module.js';
 import {
   AdminApplicationsController,
   AdmissionsSetupController,
+  PublicAdmissionsController,
 } from './admin-applications.controller.js';
 import { AdmissionsConfigService } from './admissions-config.service.js';
 import { ApplicantController } from './applicant.controller.js';
@@ -43,6 +44,7 @@ import { ShortCourse } from './entities/short-course.entity.js';
     ApplicantController,
     AdminApplicationsController,
     AdmissionsSetupController,
+    PublicAdmissionsController,
     ApplicantsController,
   ],
   providers: [

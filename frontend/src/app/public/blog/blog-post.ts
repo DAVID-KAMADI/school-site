@@ -5,10 +5,11 @@ import { RouterLink } from '@angular/router';
 import type { BlogPost } from '../../core/blog';
 import { MediaImage } from '../../shared/media-image';
 import { SiteStore } from '../../core/site';
+import { NotFound } from '../not-found';
 
 @Component({
   selector: 'app-blog-post',
-  imports: [DatePipe, RouterLink, MediaImage],
+  imports: [DatePipe, RouterLink, MediaImage, NotFound],
   template: `
     @if (post(); as article) {
       <article class="article">
@@ -32,11 +33,12 @@ import { SiteStore } from '../../core/site';
         </div>
       </article>
     } @else {
-      <section class="container container--text missing">
-        <h1>Story not found</h1>
-        <p>This story may have been moved or is no longer available.</p>
-        <a class="btn btn--primary" routerLink="/blog">Browse the blog</a>
-      </section>
+      <app-not-found
+        title="Story not found"
+        text="This story may have been moved or is no longer available."
+        homeLink="/blog"
+        homeLabel="Browse the blog"
+      />
     }
   `,
   styles: `
@@ -53,7 +55,6 @@ import { SiteStore } from '../../core/site';
     .article__content { font-size: 1.08rem; line-height: 1.8; overflow-wrap: anywhere; }
     .article__content :first-child { margin-top: 0; }
     .article__footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
-    .missing { padding-block: var(--section-space); }
     @media (max-width: 640px) { .article__cover { height: 15rem; } .article__header h1 { font-size: 2.25rem; } }
   `,
 })

@@ -3,7 +3,7 @@
 export interface MediaView {
   id: number;
   url: string;
-  kind: 'image' | 'document';
+  kind: 'image' | 'document' | 'video';
   originalName: string;
   mimeType: string;
   sizeBytes: number;

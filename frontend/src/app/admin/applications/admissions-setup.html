@@ -92,7 +92,7 @@
     </div>
     <div class="a-table-wrap">
       <table class="a-table">
-        <thead><tr><th>Intake</th><th>Applications open</th><th>Applications close</th><th>Classes start</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>Intake</th><th>Applications open</th><th>Applications close</th><th>Classes start</th><th>Status</th><th>Pop-up</th><th></th></tr></thead>
         <tbody>
           @for (i of intakes(); track i.id) {
             <tr>
@@ -101,10 +101,11 @@
               <td>{{ i.closesAt | date: 'd MMM y, HH:mm' }}</td>
               <td>{{ i.startsOn ? (i.startsOn | date: 'd MMM y') : '—' }}</td>
               <td><span class="a-badge" [class.a-badge--live]="isOpen(i)">{{ isOpen(i) ? 'Open now' : i.isActive ? 'Not open' : 'Hidden' }}</span></td>
+              <td><span class="a-badge" [class.a-badge--live]="i.popupEnabled">{{ i.popupEnabled ? 'Enabled' : 'Off' }}</span></td>
               <td><button class="a-btn a-btn--sm" type="button" (click)="edit('intakes', i)">{{ can('intakes', 'edit') ? 'Edit' : 'View' }}</button></td>
             </tr>
           } @empty {
-            <tr><td colspan="6" class="a-empty">No intakes yet.</td></tr>
+            <tr><td colspan="7" class="a-empty">No intakes yet.</td></tr>
           }
         </tbody>
       </table>
@@ -212,6 +213,13 @@
           </div>
           <label class="a-field"><span>Classes start (optional)</span><input class="a-input" type="date" name="starts" [(ngModel)]="e.row['startsOn']" /></label>
           <label class="a-check"><input type="checkbox" name="active" [(ngModel)]="e.row['isActive']" /> Show this intake</label>
+          <hr />
+          <h3>Intake pop-up</h3>
+          <p class="a-small a-muted">Shown to visitors while this intake is active and applications are open. Visitors can dismiss it.</p>
+          <label class="a-check"><input type="checkbox" name="popupEnabled" [(ngModel)]="e.row['popupEnabled']" /> Show this pop-up on the website</label>
+          <label class="a-field"><span>Pop-up title</span><input class="a-input" name="popupTitle" maxlength="120" [required]="popupEnabled(e.row)" [(ngModel)]="e.row['popupTitle']" /></label>
+          <label class="a-field"><span>Details</span><textarea class="a-textarea" name="popupDetails" maxlength="2000" [required]="popupEnabled(e.row)" placeholder="Explain the intake, key dates, entry details or how to apply." [(ngModel)]="e.row['popupDetails']"></textarea></label>
+          <div class="a-field"><span class="a-label">Photo</span><app-media-field [(value)]="$any(e.row)['popupImageId']" kind="image" /></div>
         }
         @case ('documents') {
           <label class="a-field"><span>Name</span><input class="a-input" name="name" maxlength="150" required [(ngModel)]="e.row['name']" /></label>
@@ -231,6 +239,9 @@
       <div class="a-toolbar">
         @if (canWrite(e)) {
           <button class="a-btn a-btn--primary" type="submit">Save</button>
+        }
+        @if (e.kind === 'intakes' && e.row.id && canWrite(e) && (e.row['popupTitle'] || e.row['popupDetails'] || e.row['popupImageId'])) {
+          <button class="a-btn a-btn--danger" type="button" (click)="removeIntakePopup(e.row)">Delete pop-up</button>
         }
         <button class="a-btn" type="button" (click)="editing.set(null)">{{ canWrite(e) ? 'Cancel' : 'Close' }}</button>
         @if (e.row.id && can(e.kind, 'delete')) {

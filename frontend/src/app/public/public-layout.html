@@ -1,183 +1,220 @@
-<app-splash-screen />
+<!-- A "page not found" stands on its own: none of the site's header, banners or footer. -->
+@if (!bare()) {
+  <app-splash-screen />
 
-<a class="skip-link" href="#main">{{ site.t('common.skip_to_content', 'Skip to main content') }}</a>
+  <a class="skip-link" href="#main">{{ site.t('common.skip_to_content', 'Skip to main content') }}</a>
 
-@if (alert()?.enabled && alert()?.text && !alertDismissed()) {
-  <div class="alert-banner" [class]="'alert-banner--' + (alert()?.level ?? 'info')" role="region" aria-label="Announcement">
-    <div class="container alert-banner__inner">
-      <p>
-        {{ alert()!.text }}
-        @if (alert()!.link) {
-          <app-cms-link [link]="{ label: 'Details', href: alert()!.link! }" />
-        }
-      </p>
-      <button type="button" class="alert-banner__close" (click)="dismissAlert()" aria-label="Dismiss announcement">✕</button>
-    </div>
-  </div>
-}
-
-@if (utility().length || site.setting('contact.phone') || site.languages().length > 1) {
-  <div class="utility-bar">
-    <div class="container utility-bar__inner">
-      @if (site.setting('contact.phone'); as phone) {
-        <a class="utility-bar__phone" [href]="tel($any(phone))">{{ phone }}</a>
-      }
-      <div class="utility-bar__end">
-        <nav aria-label="Quick links">
-          <ul>
-            @for (item of utility(); track $index) {
-              <li><app-cms-link [link]="asLink(item)" /></li>
-            }
-          </ul>
-        </nav>
-        <app-language-switcher />
+  @if (alert()?.enabled && alert()?.text && !alertDismissed()) {
+    <div class="alert-banner" [class]="'alert-banner--' + (alert()?.level ?? 'info')" role="region" aria-label="Announcement">
+      <div class="container alert-banner__inner">
+        <p>
+          {{ alert()!.text }}
+          @if (alert()!.link) {
+            <app-cms-link [link]="{ label: 'Details', href: alert()!.link! }" />
+          }
+        </p>
+        <button type="button" class="alert-banner__close" (click)="dismissAlert()" aria-label="Dismiss announcement">✕</button>
       </div>
     </div>
-  </div>
-}
+  }
 
-<header class="site-header" [class.site-header--scrolled]="scrolled()">
-  <div class="container site-header__inner">
-    <a [routerLink]="site.localize('/')" class="brand">
-      @if (logo(); as img) {
-        <span class="brand__logo"><app-media-image [media]="img" sizes="200px" [eager]="true" /></span>
-        <span class="visually-hidden">{{ site.institutionName() }} home</span>
-      } @else if (site.setting('institution.short_name'); as short) {
-        <!-- No logo yet: the full name, or the short name on phones where the full one would take several lines. -->
-        <span class="brand__name brand__name--full">{{ site.institutionName() || 'Home' }}</span>
-        <span class="brand__name brand__name--short" aria-hidden="true">{{ short }}</span>
-      } @else {
-        <span class="brand__name">{{ site.institutionName() || 'Home' }}</span>
-      }
-    </a>
-
-    <button
-      type="button"
-      class="menu-toggle"
-      [attr.aria-expanded]="menuOpen()"
-      aria-controls="main-nav"
-      (click)="menuOpen.set(!menuOpen())"
-    >
-      <span class="menu-toggle__bars" aria-hidden="true"></span>
-      {{ site.t('header.menu_button', 'Menu') }}
-    </button>
-
-    <nav id="main-nav" class="main-nav" [class.main-nav--open]="menuOpen()" [class.main-nav--animated]="motion()" aria-label="Main" (keydown)="closeDropdownOnEscape($event)">
-      <ul class="main-nav__list">
-        @for (item of main(); track $index; let i = $index) {
-          <li class="main-nav__item" [style.--i]="i">
-            @if (item.children.length) {
-              <button
-                type="button"
-                class="main-nav__link main-nav__toggle"
-                [attr.aria-expanded]="openDropdown() === i"
-                [attr.aria-controls]="'submenu-' + i"
-                (click)="toggleDropdown(i)"
-              >
-                {{ item.label }}
-              </button>
-              <ul class="submenu" [id]="'submenu-' + i" [class.submenu--open]="openDropdown() === i">
-                <li><app-cms-link [link]="asLink(item)" linkClass="submenu__link submenu__link--overview" [text]="item.label + ' overview'" /></li>
-                @for (child of item.children; track $index) {
-                  <li><app-cms-link [link]="asLink(child)" linkClass="submenu__link" /></li>
-                }
-              </ul>
-            } @else {
-              <app-cms-link [link]="asLink(item)" linkClass="main-nav__link" />
-            }
-          </li>
+  @if (utility().length || site.setting('contact.phone') || site.languages().length > 1) {
+    <div class="utility-bar">
+      <div class="container utility-bar__inner">
+        @if (site.setting('contact.phone'); as phone) {
+          <a class="utility-bar__phone" [href]="tel($any(phone))">{{ phone }}</a>
         }
-        @if (!blogInMain()) {
-          <li class="main-nav__item" [style.--i]="main().length"><a routerLink="/blog" class="main-nav__link">Blog</a></li>
-        }
-      </ul>
-      @if (mainButtons().length) {
-        <div class="main-nav__actions" [style.--i]="main().length + 1">
-          @for (b of mainButtons(); track $index; let i = $index) {
-            <app-cms-link [link]="asLink(b)" [linkClass]="i === mainButtons().length - 1 ? 'btn btn--accent' : 'btn btn--ghost-light'" />
-          }
+        <div class="utility-bar__end">
+          <nav aria-label="Quick links">
+            <ul>
+              @for (item of utility(); track $index) {
+                <li><app-cms-link [link]="asLink(item)" /></li>
+              }
+            </ul>
+          </nav>
+          <app-language-switcher />
         </div>
-      }
-    </nav>
-  </div>
-</header>
-
-@if (intake()?.enabled && intake()?.text) {
-  <div class="intake-banner">
-    <div class="container intake-banner__inner">
-      <p>{{ intake()!.text }}</p>
-      @if (intake()!.link) {
-        <app-cms-link [link]="{ label: site.t('header.apply_button', 'Apply Now'), href: intake()!.link! }" linkClass="btn btn--primary" />
-      }
+      </div>
     </div>
-  </div>
+  }
+
+  <header class="site-header" [class.site-header--scrolled]="scrolled()">
+    <div class="container site-header__inner">
+      <a [routerLink]="site.localize('/')" class="brand">
+        @if (logo(); as img) {
+          <span class="brand__logo"><app-media-image [media]="img" sizes="200px" [eager]="true" /></span>
+          <span class="visually-hidden">{{ site.institutionName() }} home</span>
+        } @else if (site.setting('institution.short_name'); as short) {
+          <!-- No logo yet: the full name, or the short name on phones where the full one would take several lines. -->
+          <span class="brand__name brand__name--full">{{ site.institutionName() || 'Home' }}</span>
+          <span class="brand__name brand__name--short" aria-hidden="true">{{ short }}</span>
+        } @else {
+          <span class="brand__name">{{ site.institutionName() || 'Home' }}</span>
+        }
+      </a>
+
+      <button
+        type="button"
+        class="menu-toggle"
+        [attr.aria-expanded]="menuOpen()"
+        aria-controls="main-nav"
+        (click)="menuOpen.set(!menuOpen())"
+      >
+        <span class="menu-toggle__bars" aria-hidden="true"></span>
+        {{ site.t('header.menu_button', 'Menu') }}
+      </button>
+
+      <nav id="main-nav" class="main-nav" [class.main-nav--open]="menuOpen()" [class.main-nav--animated]="motion()" aria-label="Main" (keydown)="closeDropdownOnEscape($event)">
+        <ul class="main-nav__list">
+          @for (item of main(); track $index; let i = $index) {
+            <li class="main-nav__item" [style.--i]="i" (mouseenter)="hoverDropdown(item.children.length ? i : null)" (mouseleave)="leaveDropdown()">
+              @if (item.children.length) {
+                <button
+                  type="button"
+                  class="main-nav__link main-nav__toggle"
+                  [attr.aria-expanded]="openDropdown() === i"
+                  [attr.aria-controls]="'submenu-' + i"
+                  (click)="toggleDropdown(i)"
+                >
+                  {{ item.label }}
+                </button>
+                <div class="submenu" [id]="'submenu-' + i" [class.submenu--open]="openDropdown() === i">
+                  <ul class="submenu__panel">
+                    <li class="submenu__item" style="--j: 0"><app-cms-link [link]="asLink(item)" linkClass="submenu__link submenu__link--overview" [text]="item.label + ' overview'" /></li>
+                    @for (child of item.children; track $index; let j = $index) {
+                      <li class="submenu__item" [style.--j]="j + 1"><app-cms-link [link]="asLink(child)" linkClass="submenu__link" /></li>
+                    }
+                  </ul>
+                </div>
+              } @else {
+                <app-cms-link [link]="asLink(item)" linkClass="main-nav__link" />
+              }
+            </li>
+          }
+          @if (!blogInMain()) {
+            <li class="main-nav__item" [style.--i]="main().length"><a routerLink="/blog" class="main-nav__link">Blog</a></li>
+          }
+        </ul>
+        @if (mainButtons().length) {
+          <div class="main-nav__actions" [style.--i]="main().length + 1">
+            @for (b of mainButtons(); track $index; let i = $index) {
+              <app-cms-link [link]="asLink(b)" [linkClass]="i === mainButtons().length - 1 ? 'btn btn--accent' : 'btn btn--ghost-light'" />
+            }
+          </div>
+        }
+      </nav>
+    </div>
+  </header>
+
+  @if (intake()?.enabled && intake()?.text) {
+    <div class="intake-banner">
+      <div class="container intake-banner__inner">
+        <p>{{ intake()!.text }}</p>
+        @if (intake()!.link) {
+          <app-cms-link [link]="{ label: site.t('header.apply_button', 'Apply Now'), href: intake()!.link! }" linkClass="btn btn--primary" />
+        }
+      </div>
+    </div>
+  }
+
+  @if (intakePopup(); as popup) {
+    <div class="intake-popup-backdrop" [class.is-leaving]="popupLeaving()" (click)="dismissIntakePopup()">
+      <section class="intake-popup" role="dialog" aria-modal="true" aria-labelledby="intake-popup-title" aria-describedby="intake-popup-details" cdkTrapFocus cdkTrapFocusAutoCapture (click)="$event.stopPropagation()">
+        <button type="button" class="intake-popup__close" aria-label="Close intake announcement" (click)="dismissIntakePopup()">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        </button>
+        <div class="intake-popup__media">
+          <app-media-image [media]="popup.image" [alt]="popup.title" sizes="(max-width: 760px) 92vw, 29rem" [eager]="true" />
+          <span class="intake-popup__badge"><span class="intake-popup__pulse" aria-hidden="true"></span>Applications open</span>
+        </div>
+        <div class="intake-popup__content">
+          <p class="intake-popup__eyebrow">{{ popup.name }} intake</p>
+          <h2 id="intake-popup-title">{{ popup.title }}</h2>
+          <p id="intake-popup-details" class="intake-popup__details">{{ popup.details }}</p>
+          <p class="intake-popup__deadline">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
+            {{ popupDeadline(popup) }}
+          </p>
+          <div class="intake-popup__actions">
+            <a routerLink="/apply" class="btn btn--accent btn--lg intake-popup__cta" (click)="dismissIntakePopup()">
+              Apply now
+              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+            </a>
+            <button type="button" class="intake-popup__later" (click)="dismissIntakePopup()">Maybe later</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  }
 }
 
-<main id="main" tabindex="-1">
+<main id="main" tabindex="-1" [class.main--bare]="bare()">
   <router-outlet />
 </main>
 
-<footer class="site-footer">
-  <div class="container site-footer__grid">
-    <div class="site-footer__about">
-      <p class="site-footer__name">{{ site.institutionName() }}</p>
-      @if (site.setting('institution.tagline')) {
-        <p>{{ site.setting('institution.tagline') }}</p>
-      }
-      <address>
-        @if (site.setting('contact.address')) {
-          <span>{{ site.setting('contact.address') }}</span>
+@if (!bare()) {
+  <footer class="site-footer">
+    <div class="container site-footer__grid">
+      <div class="site-footer__about">
+        <p class="site-footer__name">{{ site.institutionName() }}</p>
+        @if (site.setting('institution.tagline')) {
+          <p>{{ site.setting('institution.tagline') }}</p>
         }
-        @if (site.setting('contact.phone'); as phone) {
-          <a [href]="tel($any(phone))">{{ phone }}</a>
+        <address>
+          @if (site.setting('contact.address')) {
+            <span>{{ site.setting('contact.address') }}</span>
+          }
+          @if (site.setting('contact.phone'); as phone) {
+            <a [href]="tel($any(phone))">{{ phone }}</a>
+          }
+          @if (site.setting('contact.whatsapp'); as wa) {
+            <a [href]="whatsapp($any(wa))" target="_blank" rel="noopener noreferrer">WhatsApp {{ wa }}</a>
+          }
+          @if (site.setting('contact.email'); as email) {
+            <a [href]="'mailto:' + email">{{ email }}</a>
+          }
+        </address>
+        @if (site.setting('payments.mpesa_paybill')) {
+          <p class="site-footer__paybill">
+            M-Pesa Paybill <strong>{{ site.setting('payments.mpesa_paybill') }}</strong><br />
+            <small>{{ site.setting('payments.mpesa_account_hint') }}</small>
+          </p>
         }
-        @if (site.setting('contact.whatsapp'); as wa) {
-          <a [href]="whatsapp($any(wa))" target="_blank" rel="noopener noreferrer">WhatsApp {{ wa }}</a>
-        }
-        @if (site.setting('contact.email'); as email) {
-          <a [href]="'mailto:' + email">{{ email }}</a>
-        }
-      </address>
-      @if (site.setting('payments.mpesa_paybill')) {
-        <p class="site-footer__paybill">
-          M-Pesa Paybill <strong>{{ site.setting('payments.mpesa_paybill') }}</strong><br />
-          <small>{{ site.setting('payments.mpesa_account_hint') }}</small>
-        </p>
+      </div>
+
+      @for (col of footer(); track $index) {
+        <nav class="site-footer__col" [attr.aria-label]="col.label">
+          <p class="site-footer__heading">{{ col.label }}</p>
+          <ul>
+            @if (!col.children.length) {
+              <li><app-cms-link [link]="asLink(col)" /></li>
+            }
+            @for (link of col.children; track $index) {
+              <li><app-cms-link [link]="asLink(link)" /></li>
+            }
+          </ul>
+        </nav>
       }
     </div>
 
-    @for (col of footer(); track $index) {
-      <nav class="site-footer__col" [attr.aria-label]="col.label">
-        <p class="site-footer__heading">{{ col.label }}</p>
-        <ul>
-          @if (!col.children.length) {
-            <li><app-cms-link [link]="asLink(col)" /></li>
-          }
-          @for (link of col.children; track $index) {
-            <li><app-cms-link [link]="asLink(link)" /></li>
-          }
-        </ul>
-      </nav>
-    }
-  </div>
-
-  <div class="container site-footer__bottom">
-    <p>{{ site.t('footer.copyright', '© {year} {institution_name}') }}</p>
-    @if (legal().length) {
-      <nav aria-label="Legal">
-        <ul class="legal-links">
-          @for (link of legal(); track $index) {
-            <li><app-cms-link [link]="asLink(link)" /></li>
+    <div class="container site-footer__bottom">
+      <p>{{ site.t('footer.copyright', '© {year} {institution_name}') }}</p>
+      @if (legal().length) {
+        <nav aria-label="Legal">
+          <ul class="legal-links">
+            @for (link of legal(); track $index) {
+              <li><app-cms-link [link]="asLink(link)" /></li>
+            }
+          </ul>
+        </nav>
+      }
+      @if (social().length) {
+        <ul class="social" aria-label="Social media">
+          @for (s of social(); track s.url) {
+            <li><a [href]="s.url" target="_blank" rel="noopener noreferrer">{{ s.name }}</a></li>
           }
         </ul>
-      </nav>
-    }
-    @if (social().length) {
-      <ul class="social" aria-label="Social media">
-        @for (s of social(); track s.url) {
-          <li><a [href]="s.url" target="_blank" rel="noopener noreferrer">{{ s.name }}</a></li>
-        }
-      </ul>
-    }
-  </div>
-</footer>
+      }
+    </div>
+  </footer>
+}

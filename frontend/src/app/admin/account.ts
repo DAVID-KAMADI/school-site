@@ -61,6 +61,6 @@ export class Account {
 
   async logoutAll() {
     await this.auth.logout(true);
-    await this.router.navigateByUrl('/admin/login');
+    await this.router.navigateByUrl('/');
   }
 }

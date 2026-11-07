@@ -16,8 +16,9 @@
     </select>
     @if (!pickerKind()) {
       <select class="a-select" name="kind" [(ngModel)]="kind" (ngModelChange)="load()" aria-label="Type">
-        <option value="">Images and documents</option>
+        <option value="">All files</option>
         <option value="image">Images</option>
+        <option value="video">Videos</option>
         <option value="document">Documents</option>
       </select>
     }
@@ -42,7 +43,7 @@
 <div class="library" [class.library--with-panel]="selected()">
   <div>
     @if (!items().length && !busy()) {
-      <div class="a-empty">No files yet. Upload photos (JPG, PNG, WebP) or documents (PDF, Word, Excel, PowerPoint).</div>
+      <div class="a-empty">No files yet. Upload photos (JPG, PNG, WebP), short videos (MP4, WebM) or documents (PDF, Word, Excel, PowerPoint).</div>
     }
     <ul class="grid">
       @for (m of items(); track m.id) {
@@ -74,6 +75,9 @@
     <aside class="a-panel details">
       @if (notice()) {
         <div class="a-alert a-alert--success">{{ notice() }}</div>
+      }
+      @if (s.kind === 'video') {
+        <video class="preview-video" [src]="s.url" controls [muted]="true" playsinline preload="metadata"></video>
       }
       @if (s.kind === 'image') {
         <div class="focal" title="Click the most important part of the photo">

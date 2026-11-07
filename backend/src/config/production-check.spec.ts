@@ -8,11 +8,13 @@ const good = {
   REQUIRE_STAFF_2FA: 'true',
   TOTP_ENCRYPTION_KEY: randomBytes(32).toString('base64'),
   PREVIEW_LINK_SECRET: randomBytes(32).toString('hex'),
+  PORTAL_KEY_SECRET: randomBytes(32).toString('base64url'),
   FRONTEND_ORIGIN: 'https://www.example.ac.ke',
   DB_NAME: 'school_site',
   DB_USER: 'school_app',
   DB_PASSWORD: randomBytes(24).toString('base64url'),
   TRUST_PROXY: '1',
+  WEBSITE_SERVER_SECRET: randomBytes(32).toString('base64url'),
 };
 
 describe('productionCheck', () => {
@@ -38,8 +40,24 @@ describe('productionCheck', () => {
       DB_PASSWORD: 'short',
       TOTP_ENCRYPTION_KEY: 'abc',
       PREVIEW_LINK_SECRET: 'x',
+      PORTAL_KEY_SECRET: '',
+      WEBSITE_SERVER_SECRET: '',
     });
-    expect(errors).toHaveLength(8);
+    expect(errors).toHaveLength(10);
+  });
+
+  it('requires a portal key secret of its own', () => {
+    expect(productionCheck({ ...good, PORTAL_KEY_SECRET: 'too-short' }).errors).toHaveLength(1);
+    expect(
+      productionCheck({ ...good, PORTAL_KEY_SECRET: good.PREVIEW_LINK_SECRET }).errors,
+    ).toHaveLength(1);
+  });
+
+  it('requires a website server secret of its own', () => {
+    expect(productionCheck({ ...good, WEBSITE_SERVER_SECRET: '' }).errors).toHaveLength(1);
+    expect(
+      productionCheck({ ...good, WEBSITE_SERVER_SECRET: good.PORTAL_KEY_SECRET }).errors,
+    ).toHaveLength(1);
   });
 
   it('warns when TRUST_PROXY is missing', () => {

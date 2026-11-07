@@ -203,7 +203,18 @@ export class UsersService {
       status: UserStatus.Active,
       accountType: input.accountType ?? AccountType.Staff,
     });
-    return this.users.save(user);
+    try {
+      return await this.users.save(user);
+    } catch (err) {
+      // Two sign-ups with the same email at the same moment (a double-click): the unique index lets
+      // one through; the other is told the account exists instead of getting a server error.
+      const code =
+        (err as { driverError?: { code?: string }; code?: string }).driverError
+          ?.code ?? (err as { code?: string }).code;
+      if (code === 'ER_DUP_ENTRY')
+        throw new ConflictException('A user with this email already exists.');
+      throw err;
+    }
   }
 
   async update(

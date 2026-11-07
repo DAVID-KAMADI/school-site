@@ -18,6 +18,7 @@ import { UtcDataSource } from './database/utc-data-source.js';
 import { HealthController } from './health/health.controller.js';
 import { CsrfMiddleware } from './identity/csrf.middleware.js';
 import { PermissionsGuard, SessionGuard } from './identity/guards.js';
+import { UserThrottleGuard } from './identity/user-throttle.js';
 import { IdentityModule } from './identity/identity.module.js';
 import { TimetableModule } from './timetable/timetable.module.js';
 
@@ -40,10 +41,12 @@ import { TimetableModule } from './timetable/timetable.module.js';
   ],
   controllers: [HealthController],
   providers: [
-    // Order matters: rate limit first, then sign-in, then permissions.
+    // Order matters: rate limit by address first, then sign-in, then permissions,
+    // then the per-person limits (which need to know who is signed in).
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: SessionGuard },
     { provide: APP_GUARD, useClass: PermissionsGuard },
+    { provide: APP_GUARD, useClass: UserThrottleGuard },
   ],
 })
 export class AppModule implements NestModule {

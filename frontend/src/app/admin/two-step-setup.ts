@@ -65,7 +65,7 @@ export class TwoStepSetup {
   private async start() {
     try {
       const me = this.auth.me() ?? (await this.auth.refresh());
-      if (!me) return void this.router.navigateByUrl('/admin/login');
+      if (!me) return void this.router.navigateByUrl('/');
       if (me.user.twoFactorEnabled) return void this.router.navigateByUrl('/admin');
       const { secret, otpauthUri } = await this.auth.beginSetup();
       this.secret.set(secret.replace(/(.{4})/g, '$1 ').trim());

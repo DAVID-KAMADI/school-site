@@ -9,6 +9,13 @@ import { MediaCache } from './media-cache';
 
 type Usage = { entityType: string; entityId: string; fieldPath: string };
 
+/** File types the upload button offers, per kind. */
+const ACCEPT = {
+  image: 'image/jpeg,image/png,image/webp,image/avif,image/gif',
+  document: '.pdf,.docx,.xlsx,.pptx',
+  video: 'video/mp4,video/webm,.mp4,.webm',
+} as const;
+
 /**
  * Media library. Used as its own admin screen and, with `pickerKind` set, inside the picker dialog
  * (clicking a file then chooses it).
@@ -25,7 +32,7 @@ export class MediaLibrary {
   protected readonly auth = inject(AuthStore);
 
   /** When set, the library is in picker mode for this kind of file. */
-  readonly pickerKind = input<'image' | 'document' | null>(null);
+  readonly pickerKind = input<'image' | 'document' | 'video' | null>(null);
   readonly picked = output<MediaView>();
 
   protected search = '';
@@ -43,7 +50,7 @@ export class MediaLibrary {
   protected readonly notice = signal('');
   protected readonly pages = computed(() => Math.max(1, Math.ceil(this.total() / 40)));
   protected readonly accept = computed(() =>
-    this.pickerKind() === 'document' ? '.pdf,.docx,.xlsx,.pptx' : this.pickerKind() === 'image' ? 'image/jpeg,image/png,image/webp,image/avif,image/gif' : 'image/jpeg,image/png,image/webp,image/avif,image/gif,.pdf,.docx,.xlsx,.pptx',
+    this.pickerKind() ? ACCEPT[this.pickerKind()!] : Object.values(ACCEPT).join(','),
   );
 
   constructor() {

@@ -29,6 +29,12 @@ import {
 } from 'class-validator';
 import type { Request, Response } from 'express';
 import { AccountType } from '../identity/entities/user.entity.js';
+import {
+  DAY,
+  HOUR,
+  MINUTE,
+  UserThrottle,
+} from '../identity/user-throttle.js';
 import { authConfig, SESSION_COOKIE } from '../config/auth.config.js';
 import type { AuthUser } from '../identity/auth-user.js';
 import { AuthService } from '../identity/auth.service.js';
@@ -159,6 +165,7 @@ export class ApplicantController {
     return this.applications.applicantView(user.id);
   }
 
+  @UserThrottle({ limit: 30, ttl: MINUTE })
   @Put('application/sections/:key')
   saveSection(
     @Param('key') key: string,
@@ -168,6 +175,8 @@ export class ApplicantController {
     return this.applications.saveSection(user.id, key, body?.data ?? {});
   }
 
+  // Up to 20 MB each: enough for a full set of documents and re-tries, not for filling the disk.
+  @UserThrottle({ limit: 10, ttl: MINUTE }, { limit: 30, ttl: HOUR }, { limit: 60, ttl: DAY })
   @Post('application/documents')
   @UseInterceptors(upload)
   uploadDocument(
@@ -178,6 +187,7 @@ export class ApplicantController {
     return this.applications.uploadDocument(user.id, dto.documentTypeId, file);
   }
 
+  @UserThrottle({ limit: 20, ttl: MINUTE })
   @Delete('application/documents/:id')
   deleteDocument(
     @Param('id', ParseIntPipe) id: number,
@@ -201,30 +211,36 @@ export class ApplicantController {
     );
   }
 
+  @UserThrottle({ limit: 5, ttl: MINUTE })
   @Post('application/submit')
   @HttpCode(200)
   submit(@Body() dto: SubmitDto, @CurrentUser() user: AuthUser) {
     return this.applications.submit(user.id, dto.declaration);
   }
 
+  @UserThrottle({ limit: 5, ttl: MINUTE }, { limit: 20, ttl: DAY })
   @Post('application/fee')
   @HttpCode(200)
   fee(@Body() dto: FeeDto, @CurrentUser() user: AuthUser) {
     return this.applications.reportFee(user.id, dto.reference);
   }
 
+  // Each message reaches the admissions team.
+  @UserThrottle({ limit: 5, ttl: MINUTE }, { limit: 30, ttl: DAY })
   @Post('application/messages')
   @HttpCode(200)
   message(@Body() dto: MessageDto, @CurrentUser() user: AuthUser) {
     return this.applications.applicantMessage(user.id, dto.message);
   }
 
+  @UserThrottle({ limit: 5, ttl: MINUTE })
   @Post('application/offer/accept')
   @HttpCode(200)
   acceptOffer(@CurrentUser() user: AuthUser) {
     return this.applications.respondToOffer(user.id, true);
   }
 
+  @UserThrottle({ limit: 5, ttl: MINUTE })
   @Post('application/offer/decline')
   @HttpCode(200)
   declineOffer(@CurrentUser() user: AuthUser) {
@@ -236,12 +252,14 @@ export class ApplicantController {
     sendPdf(res, await this.applications.applicantOfferLetter(user.id));
   }
 
+  @UserThrottle({ limit: 5, ttl: MINUTE }, { limit: 10, ttl: DAY })
   @Post('application/new')
   @HttpCode(200)
   startNew(@CurrentUser() user: AuthUser) {
     return this.applications.startNew(user.id);
   }
 
+  @UserThrottle({ limit: 5, ttl: MINUTE })
   @Post('application/withdraw')
   @HttpCode(200)
   withdraw(@CurrentUser() user: AuthUser) {

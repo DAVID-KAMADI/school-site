@@ -36,5 +36,9 @@ export function authConfig(env: NodeJS.ProcessEnv = process.env): AuthConfig {
 }
 
 export const SESSION_COOKIE = 'sid';
+/** Short pass after opening a valid staff sign-in link (/admin/<token>). */
+export const PORTAL_PASS_COOKIE = 'portal_pass';
+/** Portal cookies are only ever sent to the sign-in endpoints. */
+export const PORTAL_COOKIE_PATH = '/api/v1/auth';
 export const XSRF_COOKIE = 'XSRF-TOKEN';
 export const XSRF_HEADER = 'x-xsrf-token';

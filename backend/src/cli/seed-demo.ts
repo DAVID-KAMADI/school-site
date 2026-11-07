@@ -944,7 +944,7 @@ function pageContent(p: Record<PhotoKey, number>) {
             'Full programmes from certificate to degree, plus short courses for working people. Choose a level to see what is on offer.',
           levels: [],
           showShortCourses: true,
-          enquiryLink: link('Enquire', '/contact'),
+          enquiryLink: link('Enquire', '/contact-us'),
         }),
         block('image_text', {
           eyebrow: 'Learning by doing',

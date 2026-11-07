@@ -1,8 +1,13 @@
 import { HttpClient, HttpErrorResponse, type HttpInterceptorFn } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { Router, type CanActivateFn, type UrlTree } from '@angular/router';
+import { RedirectCommand, Router, type CanActivateFn, type UrlTree } from '@angular/router';
 import { catchError, firstValueFrom, throwError } from 'rxjs';
 import type { AuthUser, MeResponse } from './models';
+
+export interface PortalAccessStatus {
+  granted: boolean;
+  expiresAt: string | null;
+}
 
 /** Signed-in staff user for the admin portal. The session itself lives in an HttpOnly cookie. */
 @Injectable({ providedIn: 'root' })
@@ -56,6 +61,21 @@ export class AuthStore {
     return firstValueFrom(this.http.post('/api/v1/auth/change-password', { currentPassword, newPassword }));
   }
 
+  /** Whether this browser opened a valid staff sign-in link in the last few minutes. */
+  async portalAccess(): Promise<PortalAccessStatus> {
+    try {
+      return await firstValueFrom(this.http.get<PortalAccessStatus>('/api/v1/auth/portal-access'));
+    } catch {
+      return { granted: false, expiresAt: null };
+    }
+  }
+
+  /** Checks the token from a sign-in link. The server sets the pass as an HttpOnly cookie. */
+  async verifyAccessKey(key: string): Promise<void> {
+    await this.ensureCsrf();
+    await firstValueFrom(this.http.post('/api/v1/auth/portal-access', { key }));
+  }
+
   async logout(everywhere = false) {
     await firstValueFrom(this.http.post(everywhere ? '/api/v1/auth/logout-all' : '/api/v1/auth/logout', {})).catch(() => undefined);
     this.me.set(null);
@@ -96,21 +116,58 @@ export const permissionGuard: CanActivateFn = (route): boolean | UrlTree => {
   return !anyOf?.length || inject(AuthStore).canAny(anyOf) ? true : inject(Router).createUrlTree(['/admin/no-access']);
 };
 
-/** Sends visitors to the right step: sign in, enter code, or set up two-step login. */
-export const adminGuard: CanActivateFn = async (): Promise<boolean | UrlTree> => {
+/**
+ * The site's own "page not found", shown at the address that was asked for. Used for every /admin
+ * address a visitor may not see, so the admin portal does not reveal itself. The web server sends the
+ * same page with a 404 status when the address is loaded directly.
+ */
+export function notFound(router: Router): RedirectCommand {
+  return new RedirectCommand(router.parseUrl('/admin-page-not-found'), { skipLocationChange: true });
+}
+
+/** The admin portal: only for staff with a session. Everyone else sees "page not found". */
+export const adminGuard: CanActivateFn = async (): Promise<boolean | UrlTree | RedirectCommand> => {
   const auth = inject(AuthStore);
   const router = inject(Router);
   const me = auth.me() ?? (await auth.refresh());
-  if (!me) return router.createUrlTree(['/admin/login'], auth.signedOutReason() === 'replaced' ? { queryParams: { reason: 'replaced' } } : {});
-  if (me.twoFactorPending) return router.createUrlTree(['/admin/login'], { queryParams: { step: 'code' } });
+  if (!me) return notFound(router);
+  if (me.twoFactorPending) return router.createUrlTree(['/admin/login']);
   if (me.twoFactorSetupRequired) return router.createUrlTree(['/admin/two-step-setup']);
-  if (!auth.can('admin.access')) return router.createUrlTree(['/admin/login'], { queryParams: { denied: 1 } });
+  if (!auth.can('admin.access')) return notFound(router);
   return true;
 };
 
+/** Pages that only make sense part-way through signing in (the code step, setting up two-step login). */
+export const signingInGuard: CanActivateFn = async (): Promise<boolean | RedirectCommand> => {
+  const auth = inject(AuthStore);
+  const router = inject(Router);
+  return (auth.me() ?? (await auth.refresh())) ? true : notFound(router);
+};
+
 /**
- * A staff member signed in on another device: send this browser to the sign-in page with the reason,
- * instead of leaving an error on whatever screen they were using.
+ * /admin/<token>: the staff sign-in page, reached only through a valid sign-in link. Opening the link
+ * gives this browser a pass for a few minutes; the API refuses staff sign-in without it.
+ * Anyone already signed in goes straight to the portal.
+ */
+export const signInLinkGuard: CanActivateFn = async (route): Promise<boolean | UrlTree | RedirectCommand> => {
+  // Both injected before the first await: inject() only works synchronously in a guard.
+  const auth = inject(AuthStore);
+  const router = inject(Router);
+  const me = auth.me() ?? (await auth.refresh());
+  // Just opened from the address bar: the web server has already checked this link for this visitor.
+  if (!me && (await auth.portalAccess()).granted) return true;
+  try {
+    // Checked as whoever is signed in: someone else's link is "not found" for them too.
+    await auth.verifyAccessKey(route.paramMap.get('token') ?? '');
+  } catch {
+    return notFound(router);
+  }
+  return me && !me.twoFactorPending ? router.createUrlTree(['/admin']) : true;
+};
+
+/**
+ * A staff member signed in on another device: leave the portal for the website instead of leaving an
+ * error on whatever screen they were using. Their sign-in link explains why when they open it again.
  */
 export const sessionReplacedInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
@@ -119,8 +176,8 @@ export const sessionReplacedInterceptor: HttpInterceptorFn = (req, next) => {
     catchError((err: unknown) => {
       if (err instanceof HttpErrorResponse && err.status === 401 && (err.error as { code?: string } | null)?.code === 'SESSION_REPLACED') {
         auth.me.set(null);
-        if (router.url.startsWith('/admin') && !router.url.startsWith('/admin/login'))
-          void router.navigate(['/admin/login'], { queryParams: { reason: 'replaced' } });
+        // The sign-in page is only reachable through a sign-in link, so go back to the website.
+        if (router.url.startsWith('/admin')) void router.navigateByUrl('/');
       }
       return throwError(() => err);
     }),

@@ -48,7 +48,33 @@ export const intakeSchema = z
       .nullable()
       .default(null),
     isActive: z.boolean().default(true),
+    popupEnabled: z.boolean().default(false),
+    popupTitle: z
+      .string()
+      .trim()
+      .max(120)
+      .nullable()
+      .default(null)
+      .transform((v) => v || null),
+    popupDetails: z
+      .string()
+      .trim()
+      .max(2000)
+      .nullable()
+      .default(null)
+      .transform((v) => v || null),
+    popupImageId: z.number().int().positive().nullable().default(null),
   })
+  .refine(
+    (i) =>
+      !i.popupEnabled ||
+      (!!i.popupTitle && !!i.popupDetails && i.popupImageId !== null),
+    {
+      message:
+        'A pop-up needs a title, details and photo before it can be shown.',
+      path: ['popupEnabled'],
+    },
+  )
   .refine((i) => i.closesAt > i.opensAt, {
     message: 'The closing date must be after the opening date.',
     path: ['closesAt'],
@@ -237,15 +263,63 @@ export class AdmissionsConfigService {
     return { name: programme.name };
   }
 
-  listIntakes() {
-    return this.intakes.find({ order: { opensAt: 'DESC' } });
+  async listIntakes() {
+    const rows = await this.intakes.find({ order: { opensAt: 'DESC' } });
+    const images = await this.mediaService.getMany(
+      rows.flatMap((row) =>
+        row.popupImageId ? [row.popupImageId] : [],
+      ),
+    );
+    return rows.map((row) => ({
+      ...row,
+      popupImage: (row.popupImageId && images.get(row.popupImageId)) || null,
+    }));
   }
 
   async saveIntake(id: number | null, body: unknown) {
     const data = parse(intakeSchema, body);
     if (id && !(await this.intakes.exists({ where: { id } })))
       throw new NotFoundException('Intake not found.');
+    if (data.popupImageId !== null) {
+      const image = await this.media.findOne({
+        where: { id: data.popupImageId, deletedAt: IsNull() },
+      });
+      if (!image || !image.mimeType.startsWith('image/'))
+        throw new BadRequestException('Choose an available photo.');
+    }
     return this.intakes.save({ ...(id ? { id } : {}), ...data });
+  }
+
+  async activeIntakePopup() {
+    const now = new Date();
+    const intake = await this.intakes.findOne({
+      where: {
+        isActive: true,
+        popupEnabled: true,
+        opensAt: LessThanOrEqual(now),
+        closesAt: MoreThanOrEqual(now),
+      },
+      order: { opensAt: 'DESC' },
+    });
+    if (
+      !intake ||
+      !intake.popupTitle ||
+      !intake.popupDetails ||
+      intake.popupImageId === null
+    )
+      return null;
+    const image = await this.mediaService.getMany([intake.popupImageId]);
+    const popupImage = image.get(intake.popupImageId);
+    if (!popupImage || popupImage.kind !== 'image') return null;
+    return {
+      id: intake.id,
+      name: intake.name,
+      updatedAt: intake.updatedAt,
+      closesAt: intake.closesAt,
+      title: intake.popupTitle,
+      details: intake.popupDetails,
+      image: popupImage,
+    };
   }
 
   async deleteIntake(id: number) {

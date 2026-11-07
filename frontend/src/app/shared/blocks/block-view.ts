@@ -45,6 +45,13 @@ export class BlockView {
     return ids.map((id) => this.m(id)).filter((x): x is NonNullable<typeof x> => !!x);
   });
 
+  /** Background video for the hero, if one is set and it really is a video. */
+  protected readonly heroVideo = computed(() => {
+    if (this.block().type !== 'hero') return null;
+    const v = this.m(this.c()['videoId']);
+    return v?.kind === 'video' ? v : null;
+  });
+
   protected m(id: unknown) {
     return typeof id === 'number' ? (this.media()[String(id)] ?? null) : null;
   }

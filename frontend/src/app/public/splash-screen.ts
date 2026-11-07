@@ -80,10 +80,10 @@ const reducedMotion = () => typeof matchMedia !== 'undefined' && matchMedia('(pr
     .splash--leaving { transform: translateY(-100%); opacity: 0; pointer-events: none; }
 
     .splash__inner { width: min(420px, 100%); text-align: center; }
-    /* A white badge, so a logo drawn for a light background still shows on the blue. */
+    /* The logo sits straight on the blue (it is white), with a soft shadow for depth. */
     .splash__logo {
-      display: block; width: fit-content; margin: 0 auto; padding: 1rem 1.25rem;
-      background: #fff; border-radius: calc(var(--radius) + 4px); box-shadow: 0 12px 34px rgb(0 0 0 / 0.28);
+      display: block; width: fit-content; margin: 0 auto;
+      filter: drop-shadow(0 8px 22px rgb(0 0 0 / 0.3));
       opacity: 0; animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.05s forwards;
     }
     .splash__logo ::ng-deep img { height: clamp(5rem, 18vw, 6.5rem); width: auto; max-width: 60vw; object-fit: contain; }

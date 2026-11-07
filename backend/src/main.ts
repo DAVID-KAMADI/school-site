@@ -6,6 +6,7 @@ import helmet from 'helmet';
 import { AppModule } from './app.module.js';
 import { MediaStorage } from './cms/media/storage.js';
 import { productionCheck } from './config/production-check.js';
+import { visitorIp } from './identity/visitor-ip.js';
 
 async function bootstrap() {
   const { errors, warnings } = productionCheck();
@@ -27,6 +28,8 @@ async function bootstrap() {
       'trust proxy',
       Number(process.env.TRUST_PROXY) || process.env.TRUST_PROXY,
     );
+  // Requests from the website server carry the real visitor address (checked with WEBSITE_SERVER_SECRET).
+  app.use(visitorIp());
   app.use(helmet());
   // Uploaded public media (images, downloads). Long cache: file names are unique and never reused.
   app.useStaticAssets(new MediaStorage().publicRoot, {

@@ -50,7 +50,8 @@ class UploadDto {
 class ListMediaQuery {
   @IsOptional() @IsString() @MaxLength(100) search?: string;
   @IsOptional() @IsString() @MaxLength(150) folder?: string;
-  @IsOptional() @IsIn(['image', 'document']) kind?: 'image' | 'document';
+  @IsOptional() @IsIn(['image', 'document', 'video'])
+  kind?: 'image' | 'document' | 'video';
   @IsOptional() @Type(() => Number) @IsInt() @Min(1) page?: number;
   @IsOptional()
   @Type(() => Number)

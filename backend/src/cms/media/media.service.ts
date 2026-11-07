@@ -76,6 +76,21 @@ const DOCUMENT_TYPES: Record<string, string> = {
   pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 };
 
+/** Short clips for hero backgrounds. Stored as uploaded (no transcoding), so keep them small. */
+const VIDEO_TYPES: Record<string, string> = {
+  mp4: 'video/mp4',
+  webm: 'video/webm',
+};
+const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
+
+export type MediaKind = 'image' | 'document' | 'video';
+
+export function mediaKind(mimeType: string): MediaKind {
+  if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType.startsWith('video/')) return 'video';
+  return 'document';
+}
+
 export interface UploadedFile {
   originalname: string;
   buffer: Buffer;
@@ -85,7 +100,7 @@ export interface UploadedFile {
 export interface MediaView {
   id: number;
   url: string;
-  kind: 'image' | 'document';
+  kind: MediaKind;
   originalName: string;
   mimeType: string;
   sizeBytes: number;
@@ -117,7 +132,7 @@ export class MediaService {
   ) {}
 
   view(m: Media): MediaView {
-    const kind = m.mimeType.startsWith('image/') ? 'image' : 'document';
+    const kind = mediaKind(m.mimeType);
     return {
       id: m.id,
       url: this.storage.url(m.storageKey),
@@ -150,6 +165,29 @@ export class MediaService {
     if (!file?.buffer?.length)
       throw new BadRequestException('No file received.');
     const ext = extname(file.originalname).slice(1).toLowerCase();
+
+    if (VIDEO_TYPES[ext]) {
+      if (file.size > MAX_VIDEO_BYTES)
+        throw new PayloadTooLargeException('Videos must be 25 MB or smaller.');
+      const b = file.buffer;
+      const ok =
+        ext === 'mp4'
+          ? b.subarray(4, 8).toString('latin1') === 'ftyp'
+          : b.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3]));
+      if (!ok)
+        throw new BadRequestException(
+          'The file content does not match its type.',
+        );
+      return {
+        kind: 'video' as const,
+        mime: VIDEO_TYPES[ext],
+        ext,
+        data: file.buffer,
+        width: null,
+        height: null,
+        variants: [],
+      };
+    }
 
     if (DOCUMENT_TYPES[ext]) {
       if (file.size > MAX_DOCUMENT_BYTES)
@@ -320,11 +358,10 @@ export class MediaService {
     if (!existing) throw new NotFoundException('Media not found.');
     const processed = await this.process(file);
     if (
-      processed.kind !==
-      (existing.mimeType.startsWith('image/') ? 'image' : 'document')
+      processed.kind !== mediaKind(existing.mimeType)
     ) {
       throw new BadRequestException(
-        'Replace an image with an image, or a document with a document.',
+        'Replace a file with one of the same kind (image, document or video).',
       );
     }
     const { storageKey, variants } = await this.writeFiles(processed);
@@ -371,7 +408,7 @@ export class MediaService {
   async list(q: {
     search?: string;
     folder?: string;
-    kind?: 'image' | 'document';
+    kind?: MediaKind;
     page?: number;
     pageSize?: number;
   }) {
@@ -388,7 +425,11 @@ export class MediaService {
       );
     if (q.folder) qb.andWhere('m.folder = :folder', { folder: q.folder });
     if (q.kind === 'image') qb.andWhere("m.mimeType LIKE 'image/%'");
-    if (q.kind === 'document') qb.andWhere("m.mimeType NOT LIKE 'image/%'");
+    if (q.kind === 'video') qb.andWhere("m.mimeType LIKE 'video/%'");
+    if (q.kind === 'document')
+      qb.andWhere(
+        "m.mimeType NOT LIKE 'image/%' AND m.mimeType NOT LIKE 'video/%'",
+      );
     const [rows, total] = await qb
       .skip((page - 1) * pageSize)
       .take(pageSize)

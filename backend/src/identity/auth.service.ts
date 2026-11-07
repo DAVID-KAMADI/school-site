@@ -10,6 +10,11 @@ import { AuditService } from '../audit/audit.service.js';
 import { authConfig } from '../config/auth.config.js';
 import { isStaff, type AuthUser, type RequestAuth } from './auth-user.js';
 import { User, UserStatus } from './entities/user.entity.js';
+import {
+  PortalAccessService,
+  type LoginGate,
+  type PortalCookies,
+} from './portal-access.service.js';
 import { SessionsService } from './sessions.service.js';
 import {
   SecretBox,
@@ -40,9 +45,21 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly sessions: SessionsService,
     private readonly audit: AuditService,
+    private readonly portal: PortalAccessService,
   ) {}
 
-  async login(email: string, password: string, meta: RequestMeta) {
+  /**
+   * Signs in with email and password. Staff accounts must also have come through a valid sign-in link
+   * (/admin/<token>) in the last few minutes, and the link must be theirs or have a free place.
+   * Without that the answer is the same as a wrong password, the password is not checked and nothing
+   * counts towards a lockout, so the link check cannot be used to test passwords or to lock staff out.
+   */
+  async login(
+    email: string,
+    password: string,
+    meta: RequestMeta,
+    portalCookies: PortalCookies = {},
+  ) {
     const user = await this.usersService.findByEmailWithSecrets(email);
 
     if (!user) {
@@ -53,6 +70,22 @@ export class AuthService {
         ipAddress: meta.ip,
       });
       throw new UnauthorizedException(GENERIC_LOGIN_ERROR);
+    }
+
+    const candidate = await this.usersService.loadAuthUser(user.id);
+    let gate: LoginGate | null = null;
+    if (candidate && isStaff(candidate)) {
+      gate = await this.portal.checkForLogin(user.id, portalCookies, meta);
+      if (!gate.ok) {
+        await argon2.verify(await this.dummyHash, password);
+        await this.audit.record({
+          action: 'auth.login_failed',
+          userId: user.id,
+          details: { reason: 'no_portal_access' },
+          ipAddress: meta.ip,
+        });
+        throw new UnauthorizedException(GENERIC_LOGIN_ERROR);
+      }
     }
 
     if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
@@ -73,6 +106,17 @@ export class AuthService {
         meta,
         passwordOk ? 'inactive' : 'bad_password',
       );
+      throw new UnauthorizedException(GENERIC_LOGIN_ERROR);
+    }
+
+    // The link becomes this person's (if it is not already) only once the password is confirmed.
+    if (gate?.ok && !(await this.portal.claim(gate, user.id, meta))) {
+      await this.audit.record({
+        action: 'auth.login_failed',
+        userId: user.id,
+        details: { reason: 'no_portal_access' },
+        ipAddress: meta.ip,
+      });
       throw new UnauthorizedException(GENERIC_LOGIN_ERROR);
     }
 

@@ -137,7 +137,8 @@ export class MenusEditor {
       items.map((i) => ({
         label: i.label,
         translations: Object.fromEntries(Object.entries(i.translations ?? {}).filter(([, v]) => v.trim())),
-        ...(i.pageId !== null ? { pageId: i.pageId } : { url: i.url }),
+        // "/https://…" happens when a full address is typed after the "/" the box starts with.
+        ...(i.pageId !== null ? { pageId: i.pageId } : { url: i.url?.trim().replace(/^\/+(?=https?:\/\/)/i, '') ?? null }),
         openInNewTab: i.openInNewTab,
         isButton: i.isButton,
         isVisible: i.isVisible,

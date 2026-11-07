@@ -7,7 +7,7 @@ export type FieldDef =
   | { key: string; label: string; kind: 'text'; max?: number; required?: boolean; help?: string }
   | { key: string; label: string; kind: 'textarea'; max?: number; required?: boolean; help?: string }
   | { key: string; label: string; kind: 'richtext'; help?: string }
-  | { key: string; label: string; kind: 'media'; accept: 'image' | 'document'; required?: boolean; help?: string }
+  | { key: string; label: string; kind: 'media'; accept: 'image' | 'document' | 'video'; required?: boolean; help?: string }
   | { key: string; label: string; kind: 'mediaList'; max: number; help?: string }
   | { key: string; label: string; kind: 'link'; optional?: boolean; help?: string }
   | { key: string; label: string; kind: 'select'; options: { value: string | number; label: string }[]; help?: string }
@@ -48,12 +48,14 @@ export const BLOCK_DEFS: BlockDef[] = [
       { key: 'text', label: 'Supporting text', kind: 'textarea', max: 400 },
       { key: 'mediaId', label: 'Background photo', kind: 'media', accept: 'image' },
       { key: 'slides', label: 'More photos (slideshow)', kind: 'mediaList', max: 6, help: 'Photos fade from one to the next every few seconds. Visitors can pause them.' },
+      { key: 'videoId', label: 'Background video', kind: 'media', accept: 'video', help: 'A short muted clip (MP4 or WebM, 10–20 seconds, ideally under 8 MB) that loops behind the headline. The background photo shows while it loads.' },
+      { key: 'startWith', label: 'Show first', kind: 'select', options: [{ value: 'video', label: 'Video' }, { value: 'slideshow', label: 'Photo slideshow' }], help: 'Used when both a video and photos are set. Visitors can switch between them at any time.' },
       { key: 'height', label: 'Height', kind: 'select', options: [{ value: 'full', label: 'Full screen' }, { value: 'medium', label: 'Medium' }, { value: 'short', label: 'Short' }] },
       { key: 'videoUrl', label: 'YouTube or Vimeo link (optional)', kind: 'text', max: 300, help: 'Shown as a click-to-play video under the headline.' },
       { key: 'buttons', label: 'Buttons', kind: 'list', itemLabel: 'Button', max: 3, fields: linkFields(), newItem: link, titleKey: 'label' },
       { key: 'align', label: 'Text alignment', kind: 'select', options: [{ value: 'left', label: 'Left' }, { value: 'center', label: 'Centre' }] },
     ],
-    defaults: () => ({ eyebrow: '', heading: 'New headline', text: '', mediaId: null, videoUrl: null, buttons: [], align: 'left', slides: [], height: 'medium' }),
+    defaults: () => ({ eyebrow: '', heading: 'New headline', text: '', mediaId: null, videoUrl: null, buttons: [], align: 'left', slides: [], videoId: null, startWith: 'video', height: 'medium' }),
   },
   {
     type: 'rich_text',
@@ -361,7 +363,7 @@ export const BLOCK_DEFS: BlockDef[] = [
       { key: 'enquiryLink', label: 'Short course button', kind: 'link', optional: true, help: 'E.g. “Enquire” linking to your contact page.' },
       background,
     ],
-    defaults: () => ({ eyebrow: '', heading: 'Programmes we offer', intro: '', levels: [], showShortCourses: true, enquiryLink: { label: 'Enquire', href: '/contact', openInNewTab: false }, background: 'default' }),
+    defaults: () => ({ eyebrow: '', heading: 'Programmes we offer', intro: '', levels: [], showShortCourses: true, enquiryLink: { label: 'Enquire', href: '/contact-us', openInNewTab: false }, background: 'default' }),
   },
   {
     type: 'short_courses',
@@ -376,7 +378,7 @@ export const BLOCK_DEFS: BlockDef[] = [
       { key: 'limit', label: 'Maximum shown', kind: 'number', min: 1, max: 60, step: 1 },
       background,
     ],
-    defaults: () => ({ eyebrow: '', heading: 'Short courses', intro: '', category: '', enquiryLink: { label: 'Enquire', href: '/contact', openInNewTab: false }, limit: 24, background: 'default' }),
+    defaults: () => ({ eyebrow: '', heading: 'Short courses', intro: '', category: '', enquiryLink: { label: 'Enquire', href: '/contact-us', openInNewTab: false }, limit: 24, background: 'default' }),
   },
   {
     type: 'child_pages',

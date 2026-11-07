@@ -31,6 +31,7 @@ import { AuditService } from '../audit/audit.service.js';
 import { can, type AuthUser } from '../identity/auth-user.js';
 import {
   CurrentUser,
+  Public,
   RequireAnyPermission,
   RequirePermissions,
   SETUP_PERMISSIONS,
@@ -376,5 +377,17 @@ export class AdmissionsSetupController {
       gone,
     );
     return { ok: true };
+  }
+}
+
+/** Current intake announcement for the public website. */
+@Public()
+@Controller('public/admissions')
+export class PublicAdmissionsController {
+  constructor(private readonly config: AdmissionsConfigService) {}
+
+  @Get('intake-popup')
+  intakePopup() {
+    return this.config.activeIntakePopup();
   }
 }

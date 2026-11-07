@@ -73,7 +73,11 @@ export class AdmissionsSetup {
             this.mediaCache.add(...s.map((c) => c.image));
             this.shortCourses.set(s);
           }),
-        shown.has('intakes') && this.api.intakes().then((i) => this.intakes.set(i)),
+        shown.has('intakes') &&
+          this.api.intakes().then((i) => {
+            this.mediaCache.add(...i.map((intake) => intake.popupImage));
+            this.intakes.set(i);
+          }),
         shown.has('documents') && this.api.documentTypes().then((d) => this.docTypes.set(d)),
       ]);
     } catch (err) {
@@ -90,6 +94,10 @@ export class AdmissionsSetup {
     return this.can(e.kind, e.row.id ? 'edit' : 'create');
   }
 
+  protected popupEnabled(row: Editable): boolean {
+    return row['popupEnabled'] === true;
+  }
+
   protected isOpen(i: IntakeRow) {
     const now = Date.now();
     return i.isActive && new Date(i.opensAt).getTime() <= now && new Date(i.closesAt).getTime() >= now;
@@ -99,7 +107,17 @@ export class AdmissionsSetup {
     const rows: Record<Tab, Editable> = {
       programmes: { code: '', name: '', level: 'diploma', school: '', duration: '', studyModes: ['full_time'], minMeanGrade: null, description: '', isActive: true, sortOrder: 0 },
       shortCourses: { title: '', category: '', summary: '', duration: '', fee: '', delivery: 'in_person', schedule: '', nextStartOn: '', imageId: null, isActive: true, sortOrder: 0 },
-      intakes: { name: '', opensAt: localInput(new Date()), closesAt: localInput(new Date(Date.now() + 60 * 86_400_000)), startsOn: '', isActive: true },
+      intakes: {
+        name: '',
+        opensAt: localInput(new Date()),
+        closesAt: localInput(new Date(Date.now() + 60 * 86_400_000)),
+        startsOn: '',
+        isActive: true,
+        popupEnabled: false,
+        popupTitle: '',
+        popupDetails: '',
+        popupImageId: null,
+      },
       documents: { name: '', description: '', isRequired: true, accepts: 'any', maxSizeMb: 5, isActive: true, sortOrder: this.docTypes().length },
     };
     this.error.set('');
@@ -112,6 +130,8 @@ export class AdmissionsSetup {
     if (kind === 'intakes') {
       copy['opensAt'] = localInput(new Date(String(copy['opensAt'])));
       copy['closesAt'] = localInput(new Date(String(copy['closesAt'])));
+      copy['popupTitle'] ??= '';
+      copy['popupDetails'] ??= '';
     }
     if (kind === 'programmes') copy['studyModes'] = [...(copy['studyModes'] as string[])];
     this.error.set('');
@@ -135,7 +155,7 @@ export class AdmissionsSetup {
     const body: Editable = { ...row };
     delete body.id;
     for (const k of ['createdAt', 'updatedAt']) delete body[k];
-    for (const k of ['duration', 'description', 'startsOn', 'fee', 'schedule', 'nextStartOn']) if (body[k] === '') body[k] = null;
+    for (const k of ['duration', 'description', 'startsOn', 'fee', 'schedule', 'nextStartOn', 'popupTitle', 'popupDetails']) if (body[k] === '') body[k] = null;
     if (kind === 'intakes') {
       body['opensAt'] = new Date(String(body['opensAt'])).toISOString();
       body['closesAt'] = new Date(String(body['closesAt'])).toISOString();
@@ -171,6 +191,26 @@ export class AdmissionsSetup {
       if (kind === 'documents') await this.api.deleteDocumentType(id);
       this.editing.set(null);
       this.notice.set(`${NOUN[kind].charAt(0).toUpperCase() + NOUN[kind].slice(1)} "${name}" deleted.`);
+      await this.load();
+    } catch (err) {
+      this.error.set(errorMessage(err));
+    }
+  }
+
+  async removeIntakePopup(row: Editable) {
+    const id = row.id!;
+    const name = String(row['name']);
+    if (!confirm(`Delete the pop-up for "${name}"? The intake itself will remain.`)) return;
+    const body: Editable = { ...row, popupEnabled: false, popupTitle: null, popupDetails: null, popupImageId: null };
+    delete body.id;
+    delete body['popupImage'];
+    for (const k of ['createdAt', 'updatedAt']) delete body[k];
+    body['opensAt'] = new Date(String(body['opensAt'])).toISOString();
+    body['closesAt'] = new Date(String(body['closesAt'])).toISOString();
+    try {
+      await this.api.saveIntake(id, body);
+      this.editing.set(null);
+      this.notice.set(`Pop-up for "${name}" deleted. The intake is unchanged.`);
       await this.load();
     } catch (err) {
       this.error.set(errorMessage(err));

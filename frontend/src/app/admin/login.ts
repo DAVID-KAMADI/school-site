@@ -19,13 +19,9 @@ import { Icon } from './icon';
     <main class="login">
       <aside class="brand" aria-hidden="true">
         <div class="brand__inner">
-          <div class="brand__mark">
-            @if (logo(); as img) {
-              <img [src]="img.url" alt="" />
-            } @else {
-              <span>{{ initials() }}</span>
-            }
-          </div>
+          @if (logo(); as img) {
+            <img class="brand__logo" [src]="img.url" alt="" />
+          }
           <p class="brand__name">{{ site.institutionName() || 'Staff portal' }}</p>
           <h2 class="brand__title">Staff portal</h2>
           <p class="brand__text">Manage the website, admissions and timetables in one secure place.</p>
@@ -40,13 +36,6 @@ import { Icon } from './icon';
       <section class="panel">
         <div class="login-card">
           <div class="login-card__top">
-            <span class="login-card__mark" aria-hidden="true">
-              @if (logo(); as img) {
-                <img [src]="img.url" alt="" />
-              } @else {
-                {{ initials() }}
-              }
-            </span>
             <p class="login-card__eyebrow">{{ site.institutionName() || 'Admin portal' }}</p>
           </div>
 
@@ -66,9 +55,6 @@ import { Icon } from './icon';
               You were signed out because your account was used to sign in on another device. If that wasn't you,
               sign in, change your password straight away and tell your administrator.
             </div>
-          }
-          @if (denied()) {
-            <div class="a-alert a-alert--warning">Your account does not have access to the admin portal.</div>
           }
           @if (error()) {
             <div class="a-alert a-alert--error" role="alert" id="login-error">{{ error() }}</div>
@@ -170,83 +156,7 @@ import { Icon } from './icon';
       </section>
     </main>
   `,
-  styles: `
-    .login { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); background: var(--a-bg); }
-
-    .brand {
-      position: relative; overflow: hidden; color: #fff; display: flex; align-items: center; padding: clamp(2rem, 5vw, 4.5rem);
-      background:
-        radial-gradient(circle at 15% 15%, rgb(255 255 255 / 0.12), transparent 40%),
-        radial-gradient(circle at 85% 90%, rgb(239 109 0 / 0.35), transparent 45%),
-        linear-gradient(150deg, var(--a-navy-2), var(--a-navy));
-    }
-    .brand::after {
-      content: ''; position: absolute; inset: 0; pointer-events: none; opacity: 0.08;
-      background-image: linear-gradient(rgb(255 255 255) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255) 1px, transparent 1px);
-      background-size: 44px 44px;
-    }
-    .brand__inner { position: relative; z-index: 1; max-width: 30rem; }
-    .brand__mark { min-width: 3.5rem; width: fit-content; padding: 0 0.6rem; height: 3.5rem; border-radius: 14px; background: var(--a-accent); display: grid; place-items: center; font-weight: 800; font-size: 1.2rem; overflow: hidden; }
-    .brand__mark img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
-    .brand__name { margin: 1.25rem 0 0; font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.8; font-weight: 600; }
-    .brand__title { margin: 0.35rem 0 0.75rem; font-size: clamp(2rem, 3.4vw, 2.8rem); line-height: 1.1; letter-spacing: -0.02em; color: #fff; }
-    .brand__text { margin: 0 0 2rem; font-size: 1.05rem; line-height: 1.6; opacity: 0.88; }
-    .brand__points { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.85rem; }
-    .brand__points li { display: flex; align-items: center; gap: 0.7rem; font-size: 0.95rem; opacity: 0.92; }
-    .brand__points app-icon { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: 8px; background: rgb(255 255 255 / 0.12); }
-
-    .panel { display: grid; place-items: center; padding: clamp(1.25rem, 4vw, 3rem); }
-    .login-card { width: min(100%, 27rem); background: #fff; border: 1px solid var(--a-line); border-radius: 18px; padding: clamp(1.5rem, 4vw, 2.5rem); box-shadow: 0 1px 2px rgb(16 24 40 / 0.04), 0 12px 32px rgb(16 24 40 / 0.08); }
-    .login-card__top { display: none; align-items: center; gap: 0.6rem; margin-bottom: 1.5rem; }
-    .login-card__mark { min-width: 2.4rem; width: fit-content; padding: 0 0.4rem; height: 2.4rem; border-radius: 10px; background: var(--a-accent); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 0.9rem; overflow: hidden; }
-    .login-card__mark img { width: 100%; height: 100%; object-fit: contain; background: #fff; }
-    .login-card__eyebrow { margin: 0; font-weight: 700; font-size: 0.85rem; color: var(--a-text); }
-    h1 { margin: 0; font-size: 1.75rem; letter-spacing: -0.02em; color: var(--a-text); }
-    .lead { margin: 0.4rem 0 1.5rem; color: var(--a-muted); }
-
-    .form { display: grid; gap: 1.1rem; }
-    .field { display: grid; gap: 0.4rem; }
-    .field > span:first-child { font-weight: 600; font-size: 0.9rem; color: var(--a-text); }
-    .control {
-      display: flex; align-items: center; gap: 0.6rem; padding: 0 0.85rem; min-height: 3rem; border: 1.5px solid var(--a-line-strong); border-radius: 10px; background: #fff;
-      color: var(--a-muted); transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .control:focus-within { border-color: var(--a-primary); box-shadow: 0 0 0 4px var(--a-primary-soft); color: var(--a-primary); }
-    .control input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 1rem; color: var(--a-text); padding: 0.7rem 0; }
-    .control input::placeholder { color: #9aa3b2; }
-    .control:has(input[aria-invalid='true']) { border-color: var(--a-danger); }
-    .pw-toggle { border: 0; background: none; font: inherit; font-size: 0.85rem; font-weight: 600; color: var(--a-primary); cursor: pointer; padding: 0.35rem 0.2rem; border-radius: 6px; }
-    .pw-toggle:focus-visible { outline: 2px solid var(--a-primary); }
-    .field__error { color: var(--a-danger); font-size: 0.85rem; }
-    .field__hint { color: var(--a-accent-text); font-size: 0.85rem; font-weight: 600; }
-
-    .code { width: 100%; min-height: 3.5rem; border: 1.5px solid var(--a-line-strong); border-radius: 10px; font: inherit; font-size: 1.75rem; font-weight: 700; letter-spacing: 0.55em; text-align: center; padding-left: 0.55em; }
-    .code:focus { outline: 0; border-color: var(--a-primary); box-shadow: 0 0 0 4px var(--a-primary-soft); }
-
-    .submit {
-      display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 3rem; border: 0; border-radius: 10px; cursor: pointer;
-      background: var(--a-primary); color: #fff; font: inherit; font-weight: 700; font-size: 1rem; transition: background 0.15s, transform 0.05s;
-    }
-    .submit:hover:not(:disabled) { background: var(--a-primary-strong); }
-    .submit:active:not(:disabled) { transform: translateY(1px); }
-    .submit:focus-visible { outline: 3px solid var(--a-accent); outline-offset: 2px; }
-    .submit:disabled { opacity: 0.65; cursor: default; }
-    .spinner { width: 1rem; height: 1rem; border: 2px solid rgb(255 255 255 / 0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 2s; } }
-
-    .help { margin: 0; font-size: 0.85rem; color: var(--a-muted); }
-    .link { justify-self: center; border: 0; background: none; font: inherit; color: var(--a-primary); font-weight: 600; cursor: pointer; text-decoration: underline; }
-    .back { display: inline-flex; align-items: center; gap: 0.4rem; margin-top: 2rem; font-size: 0.88rem; color: var(--a-muted); text-decoration: none; }
-    .back:hover { color: var(--a-primary); }
-
-    @media (max-width: 860px) {
-      .login { grid-template-columns: 1fr; }
-      .brand { display: none; }
-      .login-card__top { display: flex; }
-      .panel { align-items: start; padding-top: 3rem; }
-    }
-  `,
+  styleUrl: './staff-auth.scss',
 })
 export class AdminLogin {
   private readonly auth = inject(AuthStore);
@@ -259,26 +169,16 @@ export class AdminLogin {
   protected email = '';
   protected password = '';
   protected code = '';
-  protected readonly step = signal<'password' | 'code'>(this.route.snapshot.queryParamMap.get('step') === 'code' ? 'code' : 'password');
-  protected readonly denied = signal(this.route.snapshot.queryParamMap.has('denied'));
-  protected readonly replaced = signal(this.route.snapshot.queryParamMap.get('reason') === 'replaced');
+  /** Someone who has entered their password but not yet their code continues at the code step. */
+  protected readonly step = signal<'password' | 'code'>(this.auth.me()?.twoFactorPending ? 'code' : 'password');
+  protected readonly replaced = signal(this.auth.signedOutReason() === 'replaced');
   protected readonly busy = signal(false);
   protected readonly error = signal('');
   protected readonly emailError = signal('');
   protected readonly showPassword = signal(false);
   protected readonly capsLock = signal(false);
+  /** The institution logo from Settings, shown on the dark panel (it is white, so no background behind it). */
   protected readonly logo = computed(() => this.site.media(this.site.setting('institution.logo_media_id')));
-  /** The short name (e.g. RCTI) when there is no logo, else the full name's initials. */
-  protected readonly initials = computed(() => {
-    const short = this.site.setting<string>('institution.short_name')?.trim();
-    if (short && short.length <= 5) return short.toUpperCase();
-    return (this.site.institutionName() || 'Admin')
-      .split(/\s+/)
-      .map((w) => w[0])
-      .join('')
-      .slice(0, 4)
-      .toUpperCase();
-  });
 
   constructor() {
     inject(Title).setTitle('Sign in | Admin');
@@ -316,7 +216,8 @@ export class AdminLogin {
         setTimeout(() => this.focusFirst());
       } else await this.continue();
     } catch (err) {
-      this.error.set(errorMessage(err));
+      // Opening the sign-in link lets this page be used for a few minutes; after that it needs the link again.
+      this.error.set((await this.auth.portalAccess()).granted ? errorMessage(err) : this.timedOutMessage());
     } finally {
       this.busy.set(false);
     }
@@ -339,10 +240,20 @@ export class AdminLogin {
 
   async startOver() {
     await this.auth.logout();
+    if (!this.route.snapshot.paramMap.has('token') && !(await this.auth.portalAccess()).granted) {
+      await this.router.navigateByUrl('/');
+      return;
+    }
     this.step.set('password');
     this.error.set('');
     this.code = '';
     setTimeout(() => this.focusFirst());
+  }
+
+  private timedOutMessage() {
+    return this.route.snapshot.paramMap.has('token')
+      ? 'This sign-in page has timed out. Reload the page to continue.'
+      : 'This sign-in page has timed out. Open your sign-in link again to continue.';
   }
 
   private focusFirst() {

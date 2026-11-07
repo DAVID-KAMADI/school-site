@@ -244,7 +244,9 @@ export class PublicService {
       const s = c.publishedRevision!.snapshot;
       const t = translated.get(c.id);
       const firstImage =
-        s.blocks.flatMap((b) => collectMediaRefs(b.content))[0]?.mediaId ??
+        s.blocks
+          .flatMap((b) => collectMediaRefs(b.content))
+          .find((r) => !r.fieldPath.endsWith('.videoId'))?.mediaId ??
         null;
       return {
         title: t?.title ?? s.title,

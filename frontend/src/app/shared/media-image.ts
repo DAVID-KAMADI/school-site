@@ -15,7 +15,7 @@ import type { MediaView } from '../core/models';
         }
         <img
           [src]="m.url"
-          [alt]="decorative() ? '' : (m.altText ?? '')"
+          [alt]="decorative() ? '' : (alt() || m.altText || '')"
           [attr.width]="m.width"
           [attr.height]="m.height"
           [attr.loading]="eager() ? 'eager' : 'lazy'"
@@ -39,6 +39,8 @@ export class MediaImage {
   readonly eager = input(false);
   /** Purely decorative images get empty alt text so screen readers skip them. */
   readonly decorative = input(false);
+  /** Optional context-specific alt text when the library image has no description. */
+  readonly alt = input('');
 
   protected readonly webp = computed(() =>
     (this.media()?.srcset ?? [])

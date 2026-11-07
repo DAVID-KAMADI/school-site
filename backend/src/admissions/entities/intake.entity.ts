@@ -28,6 +28,18 @@ export class Intake {
   @Column({ default: true })
   isActive: boolean;
 
+  @Column({ default: false })
+  popupEnabled: boolean;
+
+  @Column({ type: 'varchar', length: 120, nullable: true })
+  popupTitle: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  popupDetails: string | null;
+
+  @Column({ type: 'int', unsigned: true, nullable: true })
+  popupImageId: number | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

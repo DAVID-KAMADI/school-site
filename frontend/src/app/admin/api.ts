@@ -258,6 +258,43 @@ export class AdminApi {
     this.get<{ items: ApplicantRow[]; total: number; page: number; pageSize: number }>('/applicants', { search: q.search ?? '', page: q.page ?? 1 });
   setApplicantStatus = (id: number, status: 'active' | 'disabled') => this.patch(`/applicants/${id}/status`, { status });
   resetApplicantPassword = (id: number) => this.post<{ temporaryPassword: string }>(`/applicants/${id}/reset-password`);
+
+  // Staff portal access keys
+  portalKeys = () => this.get<PortalKey[]>('/portal-access-keys');
+  createPortalKey = (body: { name: string; expiresAt: string; maxUses: number; userId?: number }) =>
+    this.post<{ key: string; record: PortalKey }>('/portal-access-keys', body);
+  revokePortalKey = (id: string) => this.post<PortalKey>(`/portal-access-keys/${id}/revoke`);
+  portalKeyActivity = (id?: string) => this.get<PortalKeyEvent[]>(id ? `/portal-access-keys/${id}/activity` : '/portal-access-keys/activity');
+}
+
+type Person = { id: number; fullName: string } | null;
+
+export interface PortalKey {
+  id: string;
+  name: string;
+  keyHint: string;
+  status: 'active' | 'expired' | 'revoked' | 'exhausted';
+  createdAt: string;
+  createdBy: Person;
+  expiresAt: string;
+  maxUses: number;
+  currentUses: number;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  revokedBy: Person;
+  /** The staff members the link belongs to. */
+  people: { id: number; fullName: string; since: string }[];
+}
+
+export interface PortalKeyEvent {
+  id: string;
+  event: 'key_created' | 'key_revoked' | 'key_verified' | 'key_blocked' | 'staff_login' | 'staff_login_denied';
+  success: boolean;
+  at: string;
+  user: Person;
+  key: { id: string; name: string; keyHint: string } | null;
+  ipAddress: string | null;
+  reason: string | null;
 }
 
 export interface AccessMatrix {
