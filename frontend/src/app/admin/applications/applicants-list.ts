@@ -7,6 +7,7 @@ import { errorMessage } from '../../core/api-url.interceptor';
 import { STATUS_LABELS } from '../../core/admissions';
 import { AuthStore } from '../../core/auth';
 import { AdminApi, type ApplicantRow } from '../api';
+import { toastChannel } from '../toast';
 
 /**
  * Admissions → Applicants: the accounts people create to apply, kept apart from staff users.
@@ -21,9 +22,6 @@ import { AdminApi, type ApplicantRow } from '../api';
       <p class="a-muted">Accounts created by people applying online. They can only use the applicant portal; staff accounts are in Staff users.</p>
     </div>
 
-    @if (message(); as m) {
-      <div class="a-alert" [class]="'a-alert--' + m.kind" role="status">{{ m.text }}</div>
-    }
     @if (secret(); as s) {
       <div class="a-alert a-alert--warning" role="status">
         Temporary password for <strong>{{ s.email }}</strong>: <code class="pw">{{ s.password }}</code><br />
@@ -109,7 +107,7 @@ export class ApplicantsList {
   protected readonly page = signal(1);
   protected readonly pages = signal(1);
   protected readonly loading = signal(true);
-  protected readonly message = signal<{ kind: string; text: string } | null>(null);
+  protected readonly message = toastChannel();
   protected readonly secret = signal<{ email: string; password: string } | null>(null);
   protected search = '';
 

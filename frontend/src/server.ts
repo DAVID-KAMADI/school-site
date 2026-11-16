@@ -14,6 +14,7 @@ import { request as httpRequest } from 'node:http';
 import { availableParallelism } from 'node:os';
 import { join } from 'node:path';
 import { VISITOR_IP_HEADER, WEBSITE_KEY_HEADER } from './app/core/api-url.interceptor';
+import { APP_ROUTES, cacheKey, PageCache, pageCacheSeconds, withNonce, type RenderedPage } from './page-cache';
 
 /**
  * Production web server: serves the built site, renders public pages on the server,
@@ -126,7 +127,11 @@ function proxyToApi(req: Request, res: Response) {
     },
   );
   upstream.on('error', () => {
-    if (!res.headersSent) res.status(502).json({ message: 'The service is temporarily unavailable. Please try again shortly.' });
+    if (!res.headersSent)
+      res.status(502).json({
+        code: 'API_UNREACHABLE',
+        message: 'Cannot connect to the server. The system may be starting up, restarting or offline. Please try again shortly.',
+      });
     else res.end();
   });
   req.pipe(upstream);
@@ -160,8 +165,6 @@ async function languageCodes(): Promise<string[]> {
   return siteLanguages.codes;
 }
 
-/** Same list as APP_ROUTES in core/site.ts: pages that never get a language prefix. */
-const APP_ROUTES = /^\/(admin|api|media|apply|preview|portal|login|assets|timetable|blog)(\/|$|[?#])/;
 
 /**
  * A page without a language in its address (e.g. "/admissions"):
@@ -209,11 +212,18 @@ function apiCall(req: Request, path: string, init: { method?: string; cookie?: s
   });
 }
 
+/** Whether staff need a sign-in link to reach the sign-in page. Assumes yes if the API cannot say. */
+async function linksRequired(req: Request): Promise<boolean> {
+  const status = (await (await apiCall(req, '/api/v1/auth/portal-access')).json()) as { required?: boolean };
+  return status.required !== false;
+}
+
 /**
  * Who may load an /admin page at all:
  * - someone with a staff session (signed in, or part-way through two-step login);
  * - someone opening a valid sign-in link, /admin/<token>. The API checks the token and sets a short
  *   pass cookie for the sign-in, which is passed on to the browser here.
+ * - anyone, when an administrator has switched sign-in links off (Staff sign-in links page).
  * Everyone else gets "page not found", with a real 404 status, so /admin does not reveal a sign-in page.
  * The browser app applies the same rules, and the API refuses staff sign-in without the pass anyway.
  */
@@ -230,7 +240,8 @@ async function adminPageAllowed(req: Request, res: Response): Promise<boolean> {
       // Signed-in staff can use the portal, but another person's sign-in link is still "not found".
       if (me.user?.permissions?.includes('admin.access') && !token) return true;
     }
-    if (!token) return false;
+    // Sign-in links switched off by an administrator: the sign-in page (/admin/login) is open.
+    if (!token) return !(await linksRequired(req));
     const check = await apiCall(req, '/api/v1/auth/portal-access', {
       method: 'POST',
       body: { key: token },
@@ -246,11 +257,85 @@ async function adminPageAllowed(req: Request, res: Response): Promise<boolean> {
   }
 }
 
+interface MaintenanceStatus {
+  active: boolean;
+  bypass: boolean;
+  [key: string]: unknown;
+}
+
+/** The status for visitors who are not signed in, shared by all requests for a couple of seconds. */
+let anonymousMaintenance: { at: number; status: MaintenanceStatus | null } = { at: 0, status: null };
+
+/**
+ * Maintenance mode (or a backup restore), as it applies to this visitor. Only while it is on are visitors
+ * with a session cookie asked about again (signed-in staff see the site). Null when the API cannot say:
+ * the site is then served as usual.
+ */
+async function maintenanceFor(req: Request): Promise<MaintenanceStatus | null> {
+  if (Date.now() - anonymousMaintenance.at > 2000) {
+    try {
+      const status = (await (await apiCall(req, '/api/v1/maintenance')).json()) as MaintenanceStatus;
+      anonymousMaintenance = { at: Date.now(), status: typeof status?.active === 'boolean' ? status : null };
+    } catch {
+      anonymousMaintenance = { at: Date.now(), status: null };
+    }
+  }
+  const status = anonymousMaintenance.status;
+  const sid = /(?:^|;\s*)(sid=[^;]*)/.exec(req.headers.cookie ?? '')?.[1];
+  if (!status?.active || !sid) return status;
+  try {
+    return (await (await apiCall(req, '/api/v1/maintenance', { cookie: sid })).json()) as MaintenanceStatus;
+  } catch {
+    return status;
+  }
+}
+
+/** Public pages, rendered at most once per WEB_PAGE_CACHE_SECONDS (see page-cache.ts). */
+const pageCache = new PageCache(pageCacheSeconds(process.env['WEB_PAGE_CACHE_SECONDS'], production) * 1000);
+
+async function renderPage(req: Request, nonce: string | null): Promise<RenderedPage | null> {
+  const response = await angularApp.handle(req, { cspNonce: nonce, apiHeaders: visitorHeaders(req) });
+  if (!response) return null;
+  return {
+    status: response.status,
+    headers: [...response.headers].filter(([name]) => name !== 'content-length'),
+    body: await response.text(),
+    nonce,
+    cacheable: response.status === 200 && !response.headers.has('set-cookie'),
+  };
+}
+
 /** Everything else: render the Angular app (public pages on the server, admin and applicant pages in the browser). */
 app.use(async (req, res, next) => {
   // Pages differ by the browser's language on a first visit, so caches must not share them across languages.
   res.setHeader('Vary', 'Accept-Language, Cookie');
   try {
+    // Maintenance: visitors get the maintenance page (rendered by the app) with 503, never a cached page.
+    const maintenance = /^\/admin(\/|$)/.test(req.path) ? null : await maintenanceFor(req);
+    if (maintenance?.active) {
+      res.setHeader('Cache-Control', 'no-store');
+      const response = await angularApp.handle(req, {
+        cspNonce: res.locals['cspNonce'],
+        apiHeaders: visitorHeaders(req),
+        maintenance,
+      });
+      if (!response) return next();
+      if (maintenance.bypass) return void (await writeResponseToNodeResponse(response, res));
+      res.setHeader('Retry-After', '300');
+      await writeResponseToNodeResponse(new Response(response.body, { status: 503, headers: response.headers }), res);
+      return;
+    }
+    const key = pageCache.enabled ? cacheKey(req) : null;
+    if (key) {
+      const nonce = (res.locals['cspNonce'] as string | undefined) ?? null;
+      const { page, source } = await pageCache.lookup(key, () => renderPage(req, nonce));
+      if (!page) return next();
+      res.status(page.status);
+      for (const [name, value] of page.headers) res.setHeader(name, value);
+      res.setHeader('X-Page-Cache', source);
+      res.send(withNonce(page, nonce));
+      return;
+    }
     const isAdmin = /^\/admin(\/|$)/.test(req.path);
     const allowed = !isAdmin || (await adminPageAllowed(req, res));
     if (isAdmin) res.setHeader('Cache-Control', 'no-store');
@@ -296,6 +381,10 @@ if (isMainModule(import.meta.url) || process.env['pm_id']) {
       if (error) throw error;
       if (cluster.isPrimary) console.log(`Website listening on http://localhost:${port} (API: ${apiOrigin.origin})`);
     });
+    if (production && cluster.isPrimary && !process.env['pm_id'] && availableParallelism() > 2)
+      console.warn(
+        `Website: running as one process on a ${availableParallelism()}-thread server. Set WEB_WORKERS=auto to use the other cores (see README "Going live").`,
+      );
   }
 }
 

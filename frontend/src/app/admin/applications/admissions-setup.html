@@ -215,7 +215,7 @@
           <label class="a-check"><input type="checkbox" name="active" [(ngModel)]="e.row['isActive']" /> Show this intake</label>
           <hr />
           <h3>Intake pop-up</h3>
-          <p class="a-small a-muted">Shown to visitors while this intake is active and applications are open. Visitors can dismiss it.</p>
+          <p class="a-small a-muted">Shown to visitors while this intake is active and applications are open. When several intakes (or <a routerLink="/admin/popups">other pop-ups</a>) are showing, visitors swipe left or right between them.</p>
           <label class="a-check"><input type="checkbox" name="popupEnabled" [(ngModel)]="e.row['popupEnabled']" /> Show this pop-up on the website</label>
           <label class="a-field"><span>Pop-up title</span><input class="a-input" name="popupTitle" maxlength="120" [required]="popupEnabled(e.row)" [(ngModel)]="e.row['popupTitle']" /></label>
           <label class="a-field"><span>Details</span><textarea class="a-textarea" name="popupDetails" maxlength="2000" [required]="popupEnabled(e.row)" placeholder="Explain the intake, key dates, entry details or how to apply." [(ngModel)]="e.row['popupDetails']"></textarea></label>

@@ -247,6 +247,106 @@ main { flex: 1; outline: none; }
 .intake-popup__close:hover { background: var(--surface-3); transform: rotate(90deg); }
 .intake-popup__close svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; }
 
+/* Several pop-ups: swipe, arrows or dots move between them. */
+.intake-popup { touch-action: pan-y; }
+.intake-popup.is-many .intake-popup__badge { top: 1.1rem; bottom: auto; }
+.intake-popup.is-dragging .intake-popup__media,
+.intake-popup.is-dragging .intake-popup__content { transform: translateX(calc(var(--drag, 0px) * 0.35)); opacity: 0.85; transition: none; }
+.intake-popup__media,
+.intake-popup__content { transition: transform 0.25s ease, opacity 0.25s ease; }
+
+/* A pop-up without a photo: brand colours with a large icon for its kind. */
+.intake-popup__media.is-plain { display: grid; place-items: center; background: radial-gradient(120% 90% at 20% 10%, var(--action) 0%, var(--primary) 55%, var(--primary-deep) 100%); }
+.intake-popup__media.is-plain[data-kind='offer'] { background: radial-gradient(120% 90% at 20% 10%, #ffb347 0%, var(--accent) 50%, #b84f00 100%); }
+.intake-popup__media.is-plain::after { background: radial-gradient(circle at 80% 85%, rgb(255 255 255 / 0.14), transparent 45%); }
+.intake-popup__art { display: grid; place-items: center; width: 8.5rem; height: 8.5rem; border-radius: 50%; background: rgb(255 255 255 / 0.12); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.25); }
+.intake-popup__art svg { width: 4.25rem; height: 4.25rem; fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+.intake-popup__nav {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  bottom: 1.1rem;
+  width: 47.5%; /* the photo column */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  pointer-events: none;
+}
+.intake-popup__nav > * { pointer-events: auto; }
+.intake-popup__pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.94);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.22);
+}
+.intake-popup__arrow {
+  display: grid;
+  place-items: center;
+  width: 2.35rem;
+  height: 2.35rem;
+  border: 0;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+.intake-popup__arrow:hover { background: var(--action); }
+.intake-popup__arrow:active { transform: scale(0.92); }
+.intake-popup__arrow svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.intake-popup__dots { display: flex; align-items: center; gap: 0.15rem; padding-inline: 0.2rem; }
+.intake-popup__dot {
+  position: relative;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.intake-popup__dot::before {
+  content: '';
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--line-strong, #b9c2d3);
+  transform: translate(-50%, -50%);
+  transition: width 0.25s ease, background 0.25s ease;
+}
+.intake-popup__dot.is-current::before { width: 1.25rem; background: var(--accent); }
+.intake-popup__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.8rem 0.4rem 0.6rem;
+  border-radius: 999px;
+  background: rgb(0 13 46 / 0.72);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 650;
+  backdrop-filter: blur(4px);
+}
+.intake-popup__hint svg { width: 1.35rem; height: 1.35rem; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+
+@media (max-width: 760px) {
+  .intake-popup__nav { width: 100%; bottom: auto; top: calc(clamp(11rem, 34vh, 17rem) - 3.55rem); }
+  .intake-popup__hint { display: none; }
+  .intake-popup.is-many .intake-popup__pager { gap: 0.25rem; }
+  .intake-popup__art { width: 6rem; height: 6rem; }
+  .intake-popup__art svg { width: 3rem; height: 3rem; }
+}
+/* Phones: the hint sits above the photo's pager, where the thumb is. */
+@media (max-width: 760px) and (hover: none) {
+  .intake-popup__hint { display: inline-flex; position: absolute; bottom: calc(100% + 0.4rem); }
+}
+
 @media (max-width: 760px) {
   .intake-popup { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); width: min(100%, 32rem); max-height: 92vh; }
   .intake-popup__media { min-height: 0; height: clamp(11rem, 34vh, 17rem); }
@@ -269,7 +369,15 @@ main { flex: 1; outline: none; }
   .intake-popup__pulse::after { animation: intake-popup-pulse 1.8s ease-out infinite; }
   .intake-popup-backdrop.is-leaving { animation: intake-popup-fade 0.26s ease-in reverse both; }
   .intake-popup-backdrop.is-leaving .intake-popup { animation: intake-popup-leave 0.26s ease-in both; }
+  /* Moving between pop-ups: the new card slides in from the side it came from. */
+  .intake-popup__media[data-dir='next'], .intake-popup__content[data-dir='next'] { animation: intake-popup-from-right 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+  .intake-popup__media[data-dir='prev'], .intake-popup__content[data-dir='prev'] { animation: intake-popup-from-left 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+  .intake-popup__hint svg { animation: intake-popup-swipe 1.6s ease-in-out infinite; }
+  .intake-popup__art { animation: intake-popup-rise 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.1s both; }
 }
+@keyframes intake-popup-from-right { from { opacity: 0; transform: translateX(2.5rem); } to { opacity: 1; transform: none; } }
+@keyframes intake-popup-from-left { from { opacity: 0; transform: translateX(-2.5rem); } to { opacity: 1; transform: none; } }
+@keyframes intake-popup-swipe { 0%, 100% { transform: translateX(-3px); } 50% { transform: translateX(3px); } }
 @keyframes intake-popup-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes intake-popup-enter { from { opacity: 0; transform: translateY(1.5rem) scale(0.96); } to { opacity: 1; transform: none; } }
 @keyframes intake-popup-leave { to { opacity: 0; transform: translateY(0.75rem) scale(0.97); } }
@@ -310,3 +418,6 @@ address { font-style: normal; display: grid; gap: 0.3rem; }
   .main-nav ::ng-deep a.main-nav__link:hover { background: transparent; }
 }
 @keyframes drop-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* Signed-in staff during maintenance mode: visitors see the maintenance page, staff see this strip. */
+.staff-maintenance { background: var(--warning); color: #fff; text-align: center; font-weight: 600; font-size: 0.9rem; padding: 0.45rem var(--gutter); }

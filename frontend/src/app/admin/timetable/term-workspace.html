@@ -28,18 +28,6 @@
     </div>
   </div>
 
-  @if (message(); as m) {
-    <div class="a-alert" [class]="'a-alert--' + m.kind" role="status">
-      {{ m.text }}
-      @if (m.list?.length) {
-        <ul>
-          @for (item of m.list; track $index) {
-            <li>{{ item }}</li>
-          }
-        </ul>
-      }
-    </div>
-  }
 
   <div class="tabs" role="tablist">
     <button role="tab" type="button" [attr.aria-selected]="tab() === 'timetable'" (click)="tab.set('timetable')">Timetable</button>
@@ -397,8 +385,8 @@
     </div>
   }
 } @else {
-  @if (message(); as m) {
-    <div class="a-alert a-alert--error">{{ m.text }}</div>
+  @if (loadError(); as e) {
+    <div class="a-alert a-alert--error">{{ e }}</div>
   } @else {
     <p class="a-muted">Loading…</p>
   }

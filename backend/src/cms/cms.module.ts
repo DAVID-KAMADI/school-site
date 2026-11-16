@@ -12,6 +12,7 @@ import { PageBlock } from './entities/page-block.entity.js';
 import { PageRevision } from './entities/page-revision.entity.js';
 import { PageTranslation } from './entities/page-translation.entity.js';
 import { Page } from './entities/page.entity.js';
+import { Popup } from './entities/popup.entity.js';
 import { Redirect } from './entities/redirect.entity.js';
 import { SiteSetting } from './entities/site-setting.entity.js';
 import { TextString } from './entities/text-string.entity.js';
@@ -21,6 +22,11 @@ import { PageScheduler } from './pages/page-scheduler.js';
 import { PageTranslationsService } from './pages/page-translations.service.js';
 import { PagesController } from './pages/pages.controller.js';
 import { PagesService } from './pages/pages.service.js';
+import {
+  PopupsAdminController,
+  PublicPopupsController,
+} from './popups/popups.controller.js';
+import { PopupsService } from './popups/popups.service.js';
 import { PublicController } from './public/public.controller.js';
 import { PublicService } from './public/public.service.js';
 import { LanguagesService } from './site/languages.service.js';
@@ -42,6 +48,7 @@ import { SiteService } from './site/site.service.js';
       SiteSetting,
       TextString,
       Redirect,
+      Popup,
       // Read-only here: listed on pages by the Programmes and Short courses blocks.
       Programme,
       ShortCourse,
@@ -52,6 +59,8 @@ import { SiteService } from './site/site.service.js';
     MediaController,
     SiteController,
     PublicController,
+    PopupsAdminController,
+    PublicPopupsController,
   ],
   providers: [
     ContentCacheService,
@@ -62,6 +71,7 @@ import { SiteService } from './site/site.service.js';
     SiteService,
     LanguagesService,
     PublicService,
+    PopupsService,
   ],
   exports: [TypeOrmModule, MediaService, PagesService, ContentCacheService],
 })

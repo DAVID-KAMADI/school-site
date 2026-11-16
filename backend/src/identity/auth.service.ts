@@ -268,6 +268,33 @@ export class AuthService {
     await this.users.update(user.id, { twoFactorLastStep: String(step) });
   }
 
+  /**
+   * Asks a signed-in user to prove it is really them before a dangerous action (e.g. restoring a
+   * backup): their password, and their authenticator code when two-step login is on.
+   */
+  async confirmIdentity(
+    userId: number,
+    password: string,
+    code: string | undefined,
+    meta: RequestMeta,
+  ): Promise<void> {
+    const user = await this.usersService.findByIdWithSecrets(userId);
+    if (!user || !(await argon2.verify(user.passwordHash, password ?? ''))) {
+      await this.audit.record({
+        action: 'auth.confirm_failed',
+        userId,
+        details: { reason: 'bad_password' },
+        ipAddress: meta.ip,
+      });
+      throw new UnauthorizedException('Your password is incorrect.');
+    }
+    if (user.twoFactorSecret && user.twoFactorEnabledAt) {
+      if (!code?.trim())
+        throw new UnauthorizedException('Enter the code from your authenticator app.');
+      await this.checkCode(user, code, meta);
+    }
+  }
+
   async changePassword(
     auth: RequestAuth,
     currentPassword: string,

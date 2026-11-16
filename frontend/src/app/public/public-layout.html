@@ -1,5 +1,8 @@
-<!-- A "page not found" stands on its own: none of the site's header, banners or footer. -->
-@if (!bare()) {
+<!-- A "page not found" and the maintenance page stand on their own: none of the site's header, banners or footer. -->
+@if (!alone()) {
+  @if (staffMaintenanceNotice()) {
+    <div class="staff-maintenance" role="status">{{ site.t('maintenance.staff_notice', 'Maintenance mode is on: visitors see the maintenance page. You see the site because you are signed in as staff.') }}</div>
+  }
   <app-splash-screen />
 
   <a class="skip-link" href="#main">{{ site.t('common.skip_to_content', 'Skip to main content') }}</a>
@@ -117,42 +120,130 @@
     </div>
   }
 
-  @if (intakePopup(); as popup) {
-    <div class="intake-popup-backdrop" [class.is-leaving]="popupLeaving()" (click)="dismissIntakePopup()">
-      <section class="intake-popup" role="dialog" aria-modal="true" aria-labelledby="intake-popup-title" aria-describedby="intake-popup-details" cdkTrapFocus cdkTrapFocusAutoCapture (click)="$event.stopPropagation()">
-        <button type="button" class="intake-popup__close" aria-label="Close intake announcement" (click)="dismissIntakePopup()">
+  @if (popup(); as current) {
+    <div class="intake-popup-backdrop" [class.is-leaving]="popupLeaving()" (click)="dismissPopups()">
+      <section
+        class="intake-popup"
+        role="dialog"
+        aria-modal="true"
+        [attr.aria-roledescription]="popups().length > 1 ? 'carousel' : null"
+        aria-labelledby="intake-popup-title"
+        aria-describedby="intake-popup-details"
+        cdkTrapFocus
+        cdkTrapFocusAutoCapture
+        [class.is-many]="popups().length > 1"
+        [class.is-dragging]="popupDrag() !== 0"
+        [style.--drag]="popupDrag() + 'px'"
+        (click)="$event.stopPropagation()"
+        (pointerdown)="popupPointerDown($event)"
+        (pointermove)="popupPointerMove($event)"
+        (pointerup)="popupPointerUp($event)"
+        (pointercancel)="popupPointerCancel()"
+      >
+        <button type="button" class="intake-popup__close" [attr.aria-label]="popups().length > 1 ? 'Close all announcements' : 'Close announcement'" (click)="dismissPopups()">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
-        <div class="intake-popup__media">
-          <app-media-image [media]="popup.image" [alt]="popup.title" sizes="(max-width: 760px) 92vw, 29rem" [eager]="true" />
-          <span class="intake-popup__badge"><span class="intake-popup__pulse" aria-hidden="true"></span>Applications open</span>
-        </div>
-        <div class="intake-popup__content">
-          <p class="intake-popup__eyebrow">{{ popup.name }} intake</p>
-          <h2 id="intake-popup-title">{{ popup.title }}</h2>
-          <p id="intake-popup-details" class="intake-popup__details">{{ popup.details }}</p>
-          <p class="intake-popup__deadline">
-            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
-            {{ popupDeadline(popup) }}
-          </p>
-          <div class="intake-popup__actions">
-            <a routerLink="/apply" class="btn btn--accent btn--lg intake-popup__cta" (click)="dismissIntakePopup()">
-              Apply now
-              <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
-            </a>
-            <button type="button" class="intake-popup__later" (click)="dismissIntakePopup()">Maybe later</button>
+        @for (slide of [current]; track slide.key) {
+          <div class="intake-popup__media" [class.is-plain]="!slide.image" [attr.data-dir]="popupDirection()" [attr.data-kind]="slide.kind">
+            @if (slide.image) {
+              <app-media-image [media]="slide.image" [alt]="slide.title" sizes="(max-width: 760px) 92vw, 29rem" [eager]="true" />
+            } @else {
+              <span class="intake-popup__art" aria-hidden="true">
+                @switch (slide.kind) {
+                  @case ('event') { <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4M8.5 14h3v3h-3z" /></svg> }
+                  @case ('offer') { <svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z" /><circle cx="7.5" cy="8.5" r="1.5" /></svg> }
+                  @case ('course') { <svg viewBox="0 0 24 24"><path d="M2 9l10-5 10 5-10 5z" /><path d="M6 11v5c0 1.5 3 3 6 3s6-1.5 6-3v-5M22 9v6" /></svg> }
+                  @case ('news') { <svg viewBox="0 0 24 24"><rect x="3" y="4" width="15" height="16" rx="2" /><path d="M18 8h3v10a2 2 0 0 1-4 0M7 8h7M7 12h7M7 16h4" /></svg> }
+                  @default { <svg viewBox="0 0 24 24"><path d="M4 10v4h3l6 5V5L7 10z" /><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12" /></svg> }
+                }
+              </span>
+            }
+            @if (slide.badge) {
+              <span class="intake-popup__badge">
+                @if (slide.badge.live) {
+                  <span class="intake-popup__pulse" aria-hidden="true"></span>
+                }
+                {{ slide.badge.text }}
+              </span>
+            }
           </div>
-        </div>
+          <div class="intake-popup__content" [attr.data-dir]="popupDirection()">
+            <p class="intake-popup__eyebrow">{{ slide.eyebrow }}</p>
+            <h2 id="intake-popup-title">{{ slide.title }}</h2>
+            <p id="intake-popup-details" class="intake-popup__details">{{ slide.details }}</p>
+            @if (slide.when) {
+              <p class="intake-popup__deadline">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15" rx="2.5" /><path d="M3.5 10h17M8 3v4M16 3v4" /></svg>
+                {{ slide.when }}
+              </p>
+            }
+            <div class="intake-popup__actions">
+              @if (slide.cta; as cta) {
+                @if (cta.internal) {
+                  <a [routerLink]="cta.href" class="btn btn--accent btn--lg intake-popup__cta" (click)="dismissPopups()">
+                    {{ cta.label }}
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                  </a>
+                } @else {
+                  <a [href]="cta.href" target="_blank" rel="noopener" class="btn btn--accent btn--lg intake-popup__cta">
+                    {{ cta.label }}
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                  </a>
+                }
+              }
+              @if (popups().length > 1 && popupIndex() < popups().length - 1) {
+                <button type="button" class="intake-popup__later" (click)="showPopup(1)">Next</button>
+              } @else {
+                <button type="button" class="intake-popup__later" (click)="dismissPopups()">{{ slide.cta ? 'Maybe later' : 'Close' }}</button>
+              }
+            </div>
+          </div>
+        }
+        @if (popups().length > 1) {
+          <div class="intake-popup__nav">
+            @if (!popupBrowsed()) {
+              <span class="intake-popup__hint" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M9 11.5V5.5a1.5 1.5 0 0 1 3 0V11l3.6.7a2 2 0 0 1 1.6 2.2l-.6 4.6A3 3 0 0 1 13.6 21h-2.3a3 3 0 0 1-2.5-1.3L6 15.6a1.4 1.4 0 0 1 2.1-1.8L9 14.7" /><path d="M3 5h4M3 5l1.5-1.5M3 5l1.5 1.5M21 5h-4M21 5l-1.5-1.5M21 5l-1.5 1.5" /></svg>
+                Swipe for more
+              </span>
+            }
+            <div class="intake-popup__pager">
+              <button type="button" class="intake-popup__arrow" aria-label="Previous announcement" (click)="showPopup(-1)">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 6l-6 6 6 6" /></svg>
+              </button>
+              <div class="intake-popup__dots">
+                @for (p of popups(); track p.key; let i = $index) {
+                  <button
+                    type="button"
+                    class="intake-popup__dot"
+                    [class.is-current]="i === popupIndex()"
+                    [attr.aria-label]="'Announcement ' + (i + 1) + ' of ' + popups().length + ': ' + p.title"
+                    [attr.aria-current]="i === popupIndex() ? 'true' : null"
+                    (click)="goToPopup(i)"
+                  ></button>
+                }
+              </div>
+              <button type="button" class="intake-popup__arrow" aria-label="Next announcement" (click)="showPopup(1)">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 6l6 6-6 6" /></svg>
+              </button>
+            </div>
+            <p class="visually-hidden" aria-live="polite">Announcement {{ popupIndex() + 1 }} of {{ popups().length }}: {{ current.title }}</p>
+          </div>
+        }
       </section>
     </div>
   }
 }
 
-<main id="main" tabindex="-1" [class.main--bare]="bare()">
-  <router-outlet />
+<main id="main" tabindex="-1" [class.main--bare]="alone()">
+  @if (showMaintenance()) {
+    <app-maintenance-page />
+  } @else {
+    <router-outlet />
+  }
 </main>
 
-@if (!bare()) {
+@if (!alone()) {
   <footer class="site-footer">
     <div class="container site-footer__grid">
       <div class="site-footer__about">
@@ -217,4 +308,9 @@
       }
     </div>
   </footer>
+}
+
+<!-- Cookie notice until the visitor chooses (browser only). -->
+@if (!alone()) {
+  <app-cookie-notice />
 }

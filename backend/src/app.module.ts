@@ -10,6 +10,9 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdmissionsModule } from './admissions/admissions.module.js';
 import { AuditModule } from './audit/audit.module.js';
+import { BackupModule } from './backup/backup.module.js';
+import { MaintenanceModule } from './maintenance/maintenance.module.js';
+import { MessagingModule } from './messaging/messaging.module.js';
 import { BlogModule } from './blog/blog.module.js';
 import { CmsModule } from './cms/cms.module.js';
 import { DashboardModule } from './dashboard/dashboard.controller.js';
@@ -38,6 +41,9 @@ import { TimetableModule } from './timetable/timetable.module.js';
     AdmissionsModule,
     DashboardModule,
     TimetableModule,
+    BackupModule,
+    MaintenanceModule,
+    MessagingModule,
   ],
   controllers: [HealthController],
   providers: [

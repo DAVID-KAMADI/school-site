@@ -55,6 +55,34 @@ export class SiteStore {
     const root = this.document.documentElement;
     root.lang = data.locale;
     root.dir = data.languages.find((l) => l.code === data.locale)?.dir ?? 'ltr';
+    this.applyFavicon();
+  }
+
+  /**
+   * The browser tab icon chosen in Site settings (Institution → Favicon). Set on the server-rendered
+   * page too, so it shows before the app starts. Without one, index.html's favicon.ico stays.
+   */
+  private applyFavicon() {
+    const icon = this.media(this.setting('institution.favicon_media_id'));
+    const head = this.document.head;
+    if (!head) return;
+    let link = head.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!link) {
+      link = this.document.createElement('link');
+      link.setAttribute('rel', 'icon');
+      head.appendChild(link);
+    }
+    link.setAttribute('href', icon?.url ?? 'favicon.ico');
+    link.setAttribute('type', icon?.mimeType ?? 'image/x-icon');
+    // Phones use this for "Add to home screen".
+    let touch = head.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
+    if (icon && !touch) {
+      touch = this.document.createElement('link');
+      touch.setAttribute('rel', 'apple-touch-icon');
+      head.appendChild(touch);
+    }
+    if (icon) touch!.setAttribute('href', icon.url);
+    else touch?.remove();
   }
 
   /** Remembers the visitor's choice so application pages (and later visits) use it too. */

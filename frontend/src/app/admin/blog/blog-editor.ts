@@ -10,6 +10,7 @@ import { AdminApi } from '../api';
 import { RichTextEditor } from '../fields/rich-text-editor';
 import { MediaField } from '../fields/media-field';
 import { MediaCache } from '../media/media-cache';
+import { toastChannel } from '../toast';
 
 export const blogUnsavedChangesGuard: CanDeactivateFn<BlogEditor> = (editor) =>
   editor.canLeave();
@@ -43,10 +44,6 @@ export const blogUnsavedChangesGuard: CanDeactivateFn<BlogEditor> = (editor) =>
         }
       </div>
     </div>
-
-    @if (message()) {
-      <div class="a-alert" [class.a-alert--error]="message()?.kind === 'error'" [class.a-alert--success]="message()?.kind === 'success'" role="status">{{ message()?.text }}</div>
-    }
 
     @if (post(); as current) {
       @if (auth.can('pages.edit')) {
@@ -131,7 +128,7 @@ export class BlogEditor implements OnInit {
   protected readonly busy = signal(false);
   protected readonly dirty = signal(false);
   protected readonly error = signal('');
-  protected readonly message = signal<{ kind: 'success' | 'error'; text: string } | null>(null);
+  protected readonly message = toastChannel();
   protected title = '';
   protected slug = '';
   protected excerpt = '';

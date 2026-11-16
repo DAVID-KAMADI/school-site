@@ -20,6 +20,19 @@ Never point these at the live site. Use a test machine or a staging copy.
 3. In another terminal, record CPU, memory and database activity while a test runs:
    `node loadtest/monitor.mjs --out loadtest/results/monitor-<name>.csv`
 
+## Before applications open
+
+Run this once on the production server, against a staging copy of the site (never the live site):
+
+```sh
+node loadtest/prelaunch.mjs --base http://127.0.0.1:<website port> --peak 300
+```
+
+`--peak` is the most people you expect at the same moment (each simulated user is about 3 times busier than a real
+visitor). It runs a mixed step test up to the peak, a spike and a burst of submissions, checks the database
+afterwards, and prints PASS or FAIL for each target (errors under 0.5%, p95 under 1 s, no application lost or
+duplicated, simultaneous submissions all stored within 5 s). About 15 minutes.
+
 ## Tests
 
 | Command | What it does |

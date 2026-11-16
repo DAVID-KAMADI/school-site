@@ -9,6 +9,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { MoreThan, type Repository } from 'typeorm';
 import { AuditService } from '../audit/audit.service.js';
+import { SiteSetting } from '../cms/entities/site-setting.entity.js';
 import { isStaff } from './auth-user.js';
 import type { RequestMeta } from './auth.service.js';
 import { PortalAccessKeyUser } from './entities/portal-access-key-user.entity.js';
@@ -46,7 +47,15 @@ export interface PortalCookies {
   pass?: unknown;
 }
 
-export type LoginGate = { ok: true; keyId: string } | { ok: false };
+/** keyId is null when sign-in links are switched off and the sign-in page is open to everyone. */
+export type LoginGate = { ok: true; keyId: string | null } | { ok: false };
+
+/**
+ * Whether staff must come through a sign-in link to reach the sign-in page. Kept in site_settings
+ * (group "security", never sent to visitors or shown on the Site settings page). Off by default:
+ * links are only required once an administrator switches them on.
+ */
+export const LINK_REQUIRED_SETTING = 'security.require_sign_in_link';
 
 const person = (u: { id: number; fullName: string } | null | undefined) =>
   u ? { id: u.id, fullName: u.fullName } : null;
@@ -60,9 +69,39 @@ export class PortalAccessService {
     private readonly logs: Repository<PortalAccessLog>,
     @InjectRepository(PortalAccessKeyUser)
     private readonly owners: Repository<PortalAccessKeyUser>,
+    @InjectRepository(SiteSetting)
+    private readonly settings: Repository<SiteSetting>,
     private readonly users: UsersService,
     private readonly audit: AuditService,
   ) {}
+
+  /** Read on every check (a primary-key lookup), so switching it applies at once on every server. */
+  async linkRequired(): Promise<boolean> {
+    const row = await this.settings.findOneBy({ key: LINK_REQUIRED_SETTING });
+    return row?.value === true;
+  }
+
+  async setLinkRequired(required: boolean, adminId: number, meta: RequestMeta) {
+    await this.settings.upsert(
+      {
+        key: LINK_REQUIRED_SETTING,
+        groupName: 'security',
+        value: required,
+        description: 'Staff must open a sign-in link (/admin/<token>) to reach the sign-in page',
+        updatedBy: { id: adminId },
+      },
+      ['key'],
+    );
+    await this.audit.record({
+      action: required ? 'portal_keys.links_required' : 'portal_keys.links_not_required',
+      userId: adminId,
+      entityType: 'setting',
+      entityId: LINK_REQUIRED_SETTING,
+      details: { required },
+      ipAddress: meta.ip,
+    });
+    return { required };
+  }
 
   static state(k: Pick<PortalAccessKey, 'status' | 'expiresAt' | 'currentUses' | 'maxUses'>, now = Date.now()): PortalKeyState {
     if (k.status === PortalKeyStatus.Revoked) return 'revoked';
@@ -284,10 +323,14 @@ export class PortalAccessService {
   }
 
   /** Whether this browser came through a valid sign-in link in the last few minutes. */
-  async status(cookies: PortalCookies): Promise<{ granted: boolean; expiresAt: Date | null }> {
+  async status(
+    cookies: PortalCookies,
+  ): Promise<{ granted: boolean; expiresAt: Date | null; required: boolean }> {
+    // Links switched off: the sign-in page at /admin/login is open to anyone.
+    if (!(await this.linkRequired())) return { granted: true, expiresAt: null, required: false };
     const t = readPortalToken(cookies.pass);
-    if (t && (await this.usableKey(t.k))) return { granted: true, expiresAt: new Date(t.e) };
-    return { granted: false, expiresAt: null };
+    if (t && (await this.usableKey(t.k))) return { granted: true, expiresAt: new Date(t.e), required: true };
+    return { granted: false, expiresAt: null, required: true };
   }
 
   private async usableKey(keyId: string) {
@@ -305,6 +348,8 @@ export class PortalAccessService {
   async checkForLogin(userId: number, cookies: PortalCookies, meta: RequestMeta): Promise<LoginGate> {
     const pass = readPortalToken(cookies.pass);
     const k = pass ? await this.usableKey(pass.k) : null;
+    // Links switched off: anyone may sign in (a link that was opened anyway is still recorded below).
+    if (!k && !(await this.linkRequired())) return { ok: true, keyId: null };
     let reason = 'no_access_pass';
     if (k) {
       if (await this.owners.exists({ where: { keyId: k.id, userId } })) return { ok: true, keyId: k.id };
@@ -320,6 +365,10 @@ export class PortalAccessService {
    * if it is not already. One statement, so two people cannot both take a link's last place.
    */
   async claim(gate: Extract<LoginGate, { ok: true }>, userId: number, meta: RequestMeta): Promise<boolean> {
+    if (!gate.keyId) {
+      await this.log('staff_login', true, meta, { userId, details: { withoutLink: true } });
+      return true;
+    }
     const already = await this.owners.exists({ where: { keyId: gate.keyId, userId } });
     if (!already) {
       const result = await this.keys

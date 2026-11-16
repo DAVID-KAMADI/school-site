@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { errorMessage } from '../../core/api-url.interceptor';
 import { AdminApi, type LanguageRow, type TextRow } from '../api';
+import { toastChannel } from '../toast';
 
 interface Row {
   key: string;
@@ -24,9 +25,6 @@ interface Row {
         To show this text in other languages, add them under Languages.
       }
     </p>
-    @if (message(); as m) {
-      <div class="a-alert" [class]="'a-alert--' + m.kind" role="status">{{ m.text }}</div>
-    }
     <input class="a-input search" type="search" placeholder="Filter" [(ngModel)]="filter" aria-label="Filter text" />
     <div class="a-table-wrap">
       <table class="a-table">
@@ -69,7 +67,7 @@ export class TextEditor {
   protected readonly rows = signal<Row[]>([]);
   /** Site languages other than English. */
   protected readonly others = signal<LanguageRow[]>([]);
-  protected readonly message = signal<{ kind: string; text: string } | null>(null);
+  protected readonly message = toastChannel();
 
   constructor() {
     inject(Title).setTitle('Interface text | Admin');

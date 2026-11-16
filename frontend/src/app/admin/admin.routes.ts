@@ -11,6 +11,10 @@ import {
   signInLinkGuard,
 } from '../core/auth';
 import { PortalKeys } from './users/portal-keys';
+import { Backups } from './system/backups';
+import { MessagingSettingsPage } from './system/messaging-settings';
+import { FollowUps } from './applications/follow-ups';
+import { AuthStore } from '../core/auth';
 import { Account } from './account';
 import { ApplicantsList } from './applications/applicants-list';
 import { AdmissionsSetup } from './applications/admissions-setup';
@@ -29,7 +33,9 @@ import { AuditLog } from './site/audit-log';
 import { LanguagesEditor } from './site/languages-editor';
 import { MenusEditor } from './site/menus-editor';
 import { RedirectsEditor } from './site/redirects-editor';
+import { PopupsEditor } from './site/popups-editor';
 import { SettingsEditor } from './site/settings-editor';
+import { MaintenanceModeEditor } from './site/maintenance-mode';
 import { TextEditor } from './site/text-editor';
 import { TermWorkspace } from './timetable/term-workspace';
 import { TimetableHome } from './timetable/timetable-home';
@@ -37,6 +43,10 @@ import { TwoStepSetup } from './two-step-setup';
 import { AccessControl } from './users/access-control';
 import { NoAccess } from './users/no-access';
 import { UsersAdmin } from './users/users-admin';
+
+/** Backups & restore, SMS & email: super administrators only (the API checks the same). */
+const superAdminOnly = () =>
+  inject(AuthStore).user()?.roles.includes('super_admin') || inject(Router).createUrlTree(['/admin/no-access']);
 
 /** Lets in only people with at least one of these permissions. */
 const only = (...anyOf: string[]) => ({ canActivate: [permissionGuard], data: { anyOf } });
@@ -63,6 +73,7 @@ export const adminRoutes: Routes = [
           { path: 'applications', component: ApplicationsList, ...only('applications.view') },
           { path: 'applications/:id', component: ApplicationDetail, ...only('applications.view') },
           { path: 'applicants', component: ApplicantsList, ...only('applicants.manage') },
+          { path: 'follow-ups', component: FollowUps, ...only('applicants.manage') },
           { path: 'admissions-setup', component: AdmissionsSetup, ...only(...ADMISSIONS_SETUP_PERMISSIONS) },
           { path: 'timetable', component: TimetableHome, ...only('timetable.manage') },
           { path: 'timetable/:id', component: TermWorkspace, ...only('timetable.manage') },
@@ -71,10 +82,14 @@ export const adminRoutes: Routes = [
           { path: 'settings', component: SettingsEditor, ...only('settings.edit') },
           { path: 'languages', component: LanguagesEditor, ...only('settings.edit') },
           { path: 'text', component: TextEditor, ...only('text_strings.edit') },
+          { path: 'popups', component: PopupsEditor, ...only('settings.edit') },
           { path: 'redirects', component: RedirectsEditor, ...only('redirects.edit') },
+          { path: 'maintenance', component: MaintenanceModeEditor, ...only('settings.edit') },
           { path: 'users', component: UsersAdmin, ...only('users.manage') },
           { path: 'access-control', component: AccessControl, ...only('access.manage', 'users.manage') },
           { path: 'access-management', component: PortalKeys, ...only('portal_keys.manage') },
+          { path: 'backups', component: Backups, canActivate: [superAdminOnly] },
+          { path: 'messaging', component: MessagingSettingsPage, canActivate: [superAdminOnly] },
           { path: 'audit', component: AuditLog, ...only('audit.view') },
           { path: 'account', component: Account },
           { path: 'no-access', component: NoAccess },

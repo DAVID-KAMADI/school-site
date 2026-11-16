@@ -200,19 +200,25 @@ export function privacyPolicy(raw: LegalVars): string {
 <tr><td>Applicant accounts with no application</td><td>[1 year] after the last sign-in, then deleted</td></tr>
 <tr><td>Sign-in sessions</td><td>Deleted automatically when they expire (at most 12 hours)</td></tr>
 <tr><td>Audit log of sign-ins and staff actions</td><td>[2 years]</td></tr>
-<tr><td>Backups</td><td>Replaced on a rolling basis (about [14] days)</td></tr>
+<tr><td>Backups</td><td>Replaced on a rolling basis: daily copies for about [14] days and weekly copies for about [8] weeks</td></tr>
 </tbody>
 </table>
 
 <h2>9. Cookies</h2>
-<p>We use only the cookies needed for the site to work, so we do not ask for cookie consent:</p>
+<p>When you first visit, a notice at the bottom of the page tells you about cookies. Choose <strong>Accept all</strong> or <strong>Essential only</strong>; you can change your mind by clearing this site's cookies in your browser. We do not use analytics, advertising or tracking cookies.</p>
+<p><strong>Essential cookies</strong> are needed for the site to work and are always used:</p>
 <table>
 <thead><tr><th scope="col">Name</th><th scope="col">Purpose</th><th scope="col">Duration</th></tr></thead>
 <tbody>
 <tr><td>sid</td><td>Keeps you signed in. Cannot be read by scripts on the page.</td><td>Until you sign out, or at most 12 hours</td></tr>
 <tr><td>XSRF-TOKEN</td><td>Security: stops other websites from submitting forms in your name.</td><td>Your browsing session</td></tr>
+<tr><td>site_lang</td><td>Remembers the language you chose for the site.</td><td>1 year</td></tr>
+<tr><td>cookie_consent</td><td>Remembers your choice on the cookie notice.</td><td>1 year</td></tr>
+<tr><td>portal_pass</td><td>Staff only: lets a staff member use the staff sign-in page after opening their sign-in link.</td><td>15 minutes</td></tr>
 </tbody>
 </table>
+<p><strong>Video players:</strong> videos on some pages come from YouTube or Vimeo. Nothing is loaded from them until you press play. We use YouTube's privacy-enhanced mode and Vimeo's "do not track" setting, but once a video plays, YouTube or Vimeo may set their own cookies under their own privacy policies. If you chose <strong>Essential only</strong>, a note under each video reminds you of this before you play it.</p>
+<p><strong>Maps</strong> come from OpenStreetMap, which does not use advertising cookies.</p>
 <p>If you close a notice banner, your browser remembers this until you close the tab (session storage). No information is sent to us.</p>
 
 <h2>10. Your rights</h2>

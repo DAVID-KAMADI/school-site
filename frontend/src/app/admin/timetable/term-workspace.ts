@@ -6,6 +6,7 @@ import { Router, RouterLink } from '@angular/router';
 import { errorMessage } from '../../core/api-url.interceptor';
 import { buildGrid, DAY_NAMES, DAY_SHORT, ROOM_TYPE_LABELS, type GridItem, type GridPeriod } from '../../core/timetable';
 import { TimetableApi, type Board, type Lesson, type Session, type SlotOption, type Unplaced } from './timetable-api';
+import { toastChannel } from '../toast';
 
 type Tab = 'timetable' | 'lessons' | 'periods' | 'details';
 type ViewKind = 'class' | 'lecturer' | 'room';
@@ -56,7 +57,9 @@ export class TermWorkspace implements OnInit {
 
   protected readonly board = signal<Board | null>(null);
   protected readonly tab = signal<Tab>('timetable');
-  protected readonly message = signal<Message | null>(null);
+  protected readonly message = toastChannel();
+  /** Shown in place of the editor when it could not be loaded at all. */
+  protected readonly loadError = signal('');
   protected readonly busy = signal(false);
 
   // ---------- Grid state
@@ -165,7 +168,9 @@ export class TermWorkspace implements OnInit {
       if (this.viewId() === null || !this.viewChoices().some((c) => c.id === this.viewId())) this.viewId.set(this.viewChoices()[0]?.id ?? null);
       if (this.selected() !== null && !b.sessions.some((s) => s.id === this.selected())) this.clearSelection();
       else if (this.selected() !== null) await this.loadOptions(this.selected()!);
+      this.loadError.set('');
     } catch (err) {
+      if (!this.board()) this.loadError.set(errorMessage(err));
       this.message.set({ kind: 'error', text: errorMessage(err) });
     }
   }

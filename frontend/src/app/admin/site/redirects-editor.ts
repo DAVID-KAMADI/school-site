@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { errorMessage } from '../../core/api-url.interceptor';
 import { AdminApi } from '../api';
+import { toastChannel } from '../toast';
 
 type RedirectRow = { id: number; fromPath: string; toPath: string; statusCode: number; hitCount: number };
 
@@ -13,9 +14,6 @@ type RedirectRow = { id: number; fromPath: string; toPath: string; statusCode: n
   template: `
     <h1>Redirects</h1>
     <p class="a-muted">Moving or deleting a live page creates a redirect automatically. Add redirects here for addresses from the old website.</p>
-    @if (message(); as m) {
-      <div class="a-alert" [class]="'a-alert--' + m.kind" role="status">{{ m.text }}</div>
-    }
     <form class="a-panel a-row" (ngSubmit)="add()">
       <label class="a-field"><span>Old address</span><input class="a-input" name="from" [(ngModel)]="from" placeholder="/old-page.html" required /></label>
       <label class="a-field"><span>Send visitors to</span><input class="a-input" name="to" [(ngModel)]="to" placeholder="/new-page" required /></label>
@@ -48,7 +46,7 @@ type RedirectRow = { id: number; fromPath: string; toPath: string; statusCode: n
 export class RedirectsEditor {
   private readonly api = inject(AdminApi);
   protected readonly rows = signal<RedirectRow[]>([]);
-  protected readonly message = signal<{ kind: string; text: string } | null>(null);
+  protected readonly message = toastChannel();
   protected from = '';
   protected to = '';
   protected code = 301;

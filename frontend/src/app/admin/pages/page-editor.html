@@ -85,18 +85,6 @@
   @if (lockedBy(); as l) {
     <div class="a-alert a-alert--warning">{{ l.name }} is also editing this page. Saving may overwrite their changes.</div>
   }
-  @if (message(); as m) {
-    <div class="a-alert" [class]="'a-alert--' + m.kind" role="status">
-      {{ m.text }}
-      @if (m.list?.length) {
-        <ul>
-          @for (item of m.list; track $index) {
-            <li>{{ item }}</li>
-          }
-        </ul>
-      }
-    </div>
-  }
 
   @if (translations().length) {
     <div class="langs" role="group" aria-label="Language">
@@ -135,55 +123,128 @@
 
       @switch (tab()) {
         @case ('content') {
-          <label class="a-field page-title">
-            <span>Page title</span>
-            <input class="a-input" [(ngModel)]="title" (ngModelChange)="touch()" maxlength="200" required />
-          </label>
-
-          <ol class="blocks">
-            @for (b of blocks(); track b.uid; let i = $index; let first = $first; let last = $last) {
-              <li class="adder">
-                @if (palette() === i) {
-                  <ng-container *ngTemplateOutlet="paletteTpl; context: { $implicit: i }" />
-                } @else {
-                  <button type="button" class="adder__btn" (click)="palette.set(i)" aria-label="Add a block here">+</button>
-                }
-              </li>
-              <li class="block" [class.block--hidden]="b.isHidden" [class.block--error]="blockErrors()[i]">
-                <div class="block__head">
-                  <button type="button" class="block__toggle" [attr.aria-expanded]="isExpanded(b.uid)" (click)="toggle(b.uid)">
-                    <strong>{{ def(b.type)?.label ?? b.type }}</strong>
-                    <span class="a-muted">{{ summary(b) }}</span>
+          @if (current(); as b) {
+            <!-- One section open: only its fields are shown -->
+            @let i = selectedIndex();
+            <div class="detail">
+              <div class="detail__nav">
+                <button type="button" class="a-btn a-btn--sm back" (click)="back()">
+                  <app-icon name="chevronLeft" [size]="16" /> All sections
+                </button>
+                <div class="detail__step">
+                  <span class="a-small a-muted">Section {{ i + 1 }} of {{ blocks().length }}</span>
+                  <button type="button" class="a-btn a-btn--sm a-btn--icon" [disabled]="i === 0" (click)="step(-1)" aria-label="Previous section" title="Previous section">
+                    <app-icon name="chevronUp" [size]="16" />
                   </button>
-                  <div class="block__tools">
-                    <button type="button" class="a-btn a-btn--sm a-btn--icon" [disabled]="first" (click)="move(i, -1)" aria-label="Move block up">↑</button>
-                    <button type="button" class="a-btn a-btn--sm a-btn--icon" [disabled]="last" (click)="move(i, 1)" aria-label="Move block down">↓</button>
-                    <button type="button" class="a-btn a-btn--sm" (click)="toggleHidden(b)">{{ b.isHidden ? 'Show' : 'Hide' }}</button>
-                    <button type="button" class="a-btn a-btn--sm" (click)="duplicate(i)">Copy</button>
-                    <button type="button" class="a-btn a-btn--sm a-btn--danger" (click)="remove(i)">Remove</button>
-                  </div>
+                  <button type="button" class="a-btn a-btn--sm a-btn--icon" [disabled]="i === blocks().length - 1" (click)="step(1)" aria-label="Next section" title="Next section">
+                    <app-icon name="chevronDown" [size]="16" />
+                  </button>
                 </div>
-                @if (isExpanded(b.uid)) {
-                  <div class="block__body">
-                    @if (def(b.type); as d) {
-                      @if (d.fields.length) {
-                        <app-field-list [fields]="d.fields" [value]="b.content" [errors]="blockErrors()[i] ?? {}" (changed)="touch()" />
-                      } @else {
-                        <p class="a-muted a-small">This block has no settings.</p>
-                      }
+              </div>
+
+              <div class="detail__head" [class.detail__head--hidden]="b.isHidden">
+                <span class="sec-icon sec-icon--lg"><app-icon [name]="icon(b.type)" [size]="22" /></span>
+                <div class="detail__title">
+                  <h2>{{ def(b.type)?.label ?? b.type }}</h2>
+                  <span class="a-small a-muted">{{ def(b.type)?.description }}</span>
+                </div>
+              </div>
+
+              <div class="detail__tools" role="toolbar" aria-label="Section actions">
+                <button type="button" class="tool" [disabled]="i === 0" (click)="move(i, -1)"><app-icon name="chevronUp" [size]="15" /> Move up</button>
+                <button type="button" class="tool" [disabled]="i === blocks().length - 1" (click)="move(i, 1)"><app-icon name="chevronDown" [size]="15" /> Move down</button>
+                <button type="button" class="tool" (click)="toggleHidden(b)" [attr.aria-pressed]="b.isHidden">
+                  <app-icon [name]="b.isHidden ? 'eye' : 'eyeOff'" [size]="15" /> {{ b.isHidden ? 'Show on page' : 'Hide' }}
+                </button>
+                <button type="button" class="tool" (click)="duplicate(i)"><app-icon name="copy" [size]="15" /> Duplicate</button>
+                <button type="button" class="tool tool--danger" (click)="remove(i)"><app-icon name="trash" [size]="15" /> Remove</button>
+              </div>
+
+              @if (b.isHidden) {
+                <div class="a-alert a-alert--warning a-small">This section is hidden. Visitors will not see it until you show it again.</div>
+              }
+
+              <div class="detail__body">
+                @if (def(b.type); as d) {
+                  @if (d.fields.length) {
+                    <app-field-list [fields]="d.fields" [value]="b.content" [errors]="blockErrors()[i] ?? {}" (changed)="touch()" />
+                  } @else {
+                    <p class="a-muted a-small">This section has no settings.</p>
+                  }
+                }
+              </div>
+
+              <div class="detail__foot">
+                <button type="button" class="a-btn" (click)="back()"><app-icon name="check" [size]="16" /> Done</button>
+                @if (i < blocks().length - 1) {
+                  <button type="button" class="a-btn next-btn" (click)="step(1)">Next: {{ def(blocks()[i + 1].type)?.label }} <app-icon name="chevronRight" [size]="16" /></button>
+                }
+              </div>
+            </div>
+          } @else {
+            <!-- List of sections -->
+            <label class="a-field page-title">
+              <span>Page title</span>
+              <input class="a-input" [(ngModel)]="title" (ngModelChange)="touch()" maxlength="200" required />
+            </label>
+
+            <div class="outline-head">
+              <h2>Sections on this page</h2>
+              <span class="a-small a-muted">{{ blocks().length }} · click one to edit it</span>
+            </div>
+
+            <ol class="outline">
+              @for (b of blocks(); track b.uid; let i = $index; let first = $first; let last = $last) {
+                <li class="adder">
+                  @if (palette() === i) {
+                    <ng-container *ngTemplateOutlet="paletteTpl; context: { $implicit: i }" />
+                  } @else {
+                    <button type="button" class="adder__btn" (click)="palette.set(i)" aria-label="Add a section here" title="Add a section here">
+                      <app-icon name="plus" [size]="14" />
+                    </button>
+                  }
+                </li>
+                <li class="sec" [class.sec--hidden]="b.isHidden" [class.sec--error]="blockErrors()[i]">
+                  <button type="button" class="sec__main" [id]="'section-' + b.uid" (click)="open(b.uid)">
+                    <span class="sec__num">{{ i + 1 }}</span>
+                    <span class="sec-icon"><app-icon [name]="icon(b.type)" [size]="18" /></span>
+                    <span class="sec__text">
+                      <strong>{{ def(b.type)?.label ?? b.type }}</strong>
+                      <span class="sec__summary">{{ summary(b) || def(b.type)?.description }}</span>
+                    </span>
+                    @if (blockErrors()[i]) {
+                      <span class="pill pill--error"><app-icon name="alert" [size]="13" /> Needs attention</span>
                     }
+                    @if (b.isHidden) {
+                      <span class="pill"><app-icon name="eyeOff" [size]="13" /> Hidden</span>
+                    }
+                    <app-icon class="sec__chev" name="chevronRight" [size]="18" />
+                  </button>
+                  <div class="sec__quick">
+                    <button type="button" class="qbtn" [disabled]="first" (click)="move(i, -1)" aria-label="Move section up" title="Move up"><app-icon name="chevronUp" [size]="15" /></button>
+                    <button type="button" class="qbtn" [disabled]="last" (click)="move(i, 1)" aria-label="Move section down" title="Move down"><app-icon name="chevronDown" [size]="15" /></button>
+                    <button type="button" class="qbtn" (click)="toggleHidden(b)" [attr.aria-label]="b.isHidden ? 'Show section' : 'Hide section'" [title]="b.isHidden ? 'Show' : 'Hide'">
+                      <app-icon [name]="b.isHidden ? 'eye' : 'eyeOff'" [size]="15" />
+                    </button>
                   </div>
+                </li>
+              } @empty {
+                <li class="empty-outline">
+                  <p><strong>This page has no sections yet.</strong></p>
+                  <p class="a-small a-muted">Sections are the building blocks of a page — a hero banner, some text, a photo gallery and so on.</p>
+                </li>
+              }
+              <li class="adder adder--last">
+                @if (palette() === blocks().length) {
+                  <ng-container *ngTemplateOutlet="paletteTpl; context: { $implicit: blocks().length }" />
+                } @else {
+                  <button type="button" class="add-section" (click)="palette.set(blocks().length)">
+                    <app-icon name="plus" [size]="16" /> Add a section
+                  </button>
                 }
               </li>
-            }
-            <li class="adder adder--last">
-              @if (palette() === blocks().length) {
-                <ng-container *ngTemplateOutlet="paletteTpl; context: { $implicit: blocks().length }" />
-              } @else {
-                <button type="button" class="a-btn" (click)="palette.set(blocks().length)">+ Add a block</button>
-              }
-            </li>
-          </ol>
+            </ol>
+          }
         }
 
         @case ('settings') {
@@ -289,17 +350,17 @@
 
     <section class="editor__preview" aria-label="Live preview">
       <div class="a-toolbar a-toolbar--spread preview-bar">
-        <span class="a-small a-muted">Live preview</span>
+        <span class="a-small a-muted">Live preview{{ tab() === 'content' ? ' · click a section to edit it' : '' }}</span>
         <div class="a-toolbar">
           <button type="button" class="a-btn a-btn--sm" [class.a-btn--primary]="device() === 'desktop'" (click)="device.set('desktop')">Desktop</button>
           <button type="button" class="a-btn a-btn--sm" [class.a-btn--primary]="device() === 'mobile'" (click)="device.set('mobile')">Phone</button>
         </div>
       </div>
       <div class="frame" [class.frame--mobile]="device() === 'mobile'">
-        <div class="frame__inner public-preview">
+        <div #previewInner class="frame__inner public-preview" [class.is-pickable]="tab() === 'content'" (click)="previewClick($event)">
           <app-page-body [title]="previewTitle()" [template]="template" [blocks]="previewBlocks()" [media]="cacheMap()" />
           @if (!previewBlocks().length) {
-            <p class="a-empty">Add a block to start building this page.</p>
+            <p class="a-empty">Add a section to start building this page.</p>
           }
         </div>
       </div>
@@ -309,14 +370,14 @@
   <ng-template #paletteTpl let-at>
     <div class="palette">
       <div class="a-toolbar a-toolbar--spread">
-        <strong>Add a block</strong>
+        <strong>Choose a section to add</strong>
         <button type="button" class="a-btn a-btn--sm" (click)="palette.set(null)">Cancel</button>
       </div>
       <ul>
         @for (d of defs; track d.type) {
           <li>
             <button type="button" (click)="addBlock(d, at)">
-              <strong>{{ d.label }}</strong>
+              <span class="palette__label"><app-icon [name]="icon(d.type)" [size]="16" /> <strong>{{ d.label }}</strong></span>
               <span>{{ d.description }}</span>
             </button>
           </li>
@@ -325,8 +386,8 @@
     </div>
   </ng-template>
 } @else {
-  @if (message(); as m) {
-    <div class="a-alert a-alert--error">{{ m.text }}</div>
+  @if (loadError(); as e) {
+    <div class="a-alert a-alert--error">{{ e }}</div>
   } @else {
     <p class="a-muted">Loading…</p>
   }

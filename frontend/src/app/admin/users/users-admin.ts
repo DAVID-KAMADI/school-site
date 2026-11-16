@@ -6,6 +6,7 @@ import { Title } from '@angular/platform-browser';
 import { errorMessage } from '../../core/api-url.interceptor';
 import { AuthStore } from '../../core/auth';
 import { AdminApi, type PageSummary, type UserRow } from '../api';
+import { toastChannel } from '../toast';
 
 type RoleInfo = { key: string; name: string; description: string | null; permissions: string[] };
 
@@ -25,9 +26,6 @@ type RoleInfo = { key: string; name: string; description: string | null; permiss
       </div>
       <button class="a-btn a-btn--primary" type="button" (click)="creating.set(true)">+ New staff user</button>
     </div>
-    @if (message(); as m) {
-      <div class="a-alert" [class]="'a-alert--' + m.kind" role="status">{{ m.text }}</div>
-    }
     @if (secret(); as s) {
       <div class="a-alert a-alert--warning" role="status">
         Temporary password for <strong>{{ s.email }}</strong>: <code class="pw">{{ s.password }}</code><br />
@@ -150,7 +148,7 @@ export class UsersAdmin {
   protected readonly users = signal<UserRow[]>([]);
   protected readonly roles = signal<RoleInfo[]>([]);
   protected readonly pages = signal<PageSummary[]>([]);
-  protected readonly message = signal<{ kind: string; text: string } | null>(null);
+  protected readonly message = toastChannel();
   protected readonly secret = signal<{ email: string; password: string } | null>(null);
   protected readonly creating = signal(false);
   protected readonly editing = signal<UserRow | null>(null);

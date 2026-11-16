@@ -4,6 +4,7 @@ import { Title } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { errorMessage } from '../core/api-url.interceptor';
 import { AuthStore } from '../core/auth';
+import { toastChannel } from './toast';
 
 /** The signed-in user's own password and sessions. */
 @Component({
@@ -17,9 +18,6 @@ import { AuthStore } from '../core/auth';
     </section>
     <section class="a-panel">
       <h2>Change password</h2>
-      @if (message(); as m) {
-        <div class="a-alert" [class]="'a-alert--' + m.kind" role="status">{{ m.text }}</div>
-      }
       <form class="a-stack narrow" (ngSubmit)="change()">
         <label class="a-field"><span>Current password</span><input class="a-input" type="password" name="cur" autocomplete="current-password" required [(ngModel)]="current" /></label>
         <label class="a-field">
@@ -43,7 +41,7 @@ export class Account {
   private readonly router = inject(Router);
   protected current = '';
   protected next = '';
-  protected readonly message = signal<{ kind: string; text: string } | null>(null);
+  protected readonly message = toastChannel();
 
   constructor() {
     inject(Title).setTitle('My account | Admin');

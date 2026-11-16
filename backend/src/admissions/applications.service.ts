@@ -288,8 +288,8 @@ export class ApplicationsService {
     return Number.isFinite(value) && value > 0 ? value : DEFAULT_MINIMUM_AGE;
   }
 
-  /** Which sections are complete, and which required documents are missing. */
-  private async completion(app: Application, types?: DocumentType[]) {
+  /** Which sections are complete, and which required documents are missing (also used by Admissions → Follow-ups). */
+  async completion(app: Application, types?: DocumentType[]) {
     const docTypes =
       types ?? (await this.docTypes.find({ where: { isActive: true } }));
     const minimumAge = await this.minimumAge();

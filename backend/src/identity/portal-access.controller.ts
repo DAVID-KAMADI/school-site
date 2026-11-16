@@ -7,12 +7,13 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Put,
   Req,
   Res,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Type } from 'class-transformer';
-import { IsDate, IsInt, IsOptional, IsString, Length, Max, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsDate, IsInt, IsOptional, IsString, Length, Max, MaxLength, Min } from 'class-validator';
 import type { Request, Response } from 'express';
 import {
   authConfig,
@@ -63,6 +64,11 @@ class CreateKeyDto {
   @IsInt()
   @Min(1)
   userId?: number;
+}
+
+class LinkRequiredDto {
+  @IsBoolean()
+  required: boolean;
 }
 
 /** Checks the token from a staff sign-in link (/admin/<token>). Open to visitors, but rate limited and logged. */
@@ -122,6 +128,17 @@ export class PortalKeysController {
         `Choose an expiry date in the future and no more than ${MAX_KEY_DAYS} days away.`,
       );
     return this.portal.create(dto, user.id, meta(req));
+  }
+
+  /** Whether staff must open a sign-in link to reach the sign-in page. */
+  @Get('settings')
+  async settings() {
+    return { required: await this.portal.linkRequired() };
+  }
+
+  @Put('settings')
+  saveSettings(@Body() dto: LinkRequiredDto, @CurrentUser() user: AuthUser, @Req() req: Request) {
+    return this.portal.setLinkRequired(dto.required, user.id, meta(req));
   }
 
   @Get('activity')

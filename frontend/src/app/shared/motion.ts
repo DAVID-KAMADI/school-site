@@ -44,6 +44,8 @@ export class Reveal implements OnDestroy {
     afterNextRender(() => {
       const node = this.el.nativeElement;
       if (!motionAllowed(this.site)) return;
+      // The admin live preview scrolls inside its own frame, so scroll-triggered entrances would never fire there.
+      if (node.closest('.public-preview')) return;
       if (node.querySelector('.timeline')) void this.drawTimeline(node);
       if (node.querySelector('.hero--image .hero__media')) void this.heroDepth(node);
       const belowFold = node.getBoundingClientRect().top > window.innerHeight * 0.9;

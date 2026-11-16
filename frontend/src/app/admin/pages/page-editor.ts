@@ -1,6 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe, NgTemplateOutlet } from '@angular/common';
-import { Component, HostListener, computed, inject, input, signal, type OnDestroy, type OnInit } from '@angular/core';
+import { Component, ElementRef, HostListener, computed, effect, inject, input, signal, viewChild, type OnDestroy, type OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { Router, RouterLink, type CanDeactivateFn } from '@angular/router';
@@ -9,9 +9,11 @@ import type { ApiError, Block } from '../../core/models';
 import { PageBody } from '../../shared/page-body';
 import { AdminApi, type EditorBlock, type PageDetail, type PageSummary, type Revision, type TranslationDetail, type TranslationSummary } from '../api';
 import { FieldList } from '../fields/field-list';
+import { Icon, type IconName } from '../icon';
 import { MediaField } from '../fields/media-field';
 import { MediaCache } from '../media/media-cache';
 import { BLOCK_DEFS, BLOCK_DEF_MAP, type BlockDef } from './block-defs';
+import { toastChannel } from '../toast';
 
 interface LocalBlock extends EditorBlock {
   uid: number;
@@ -19,9 +21,34 @@ interface LocalBlock extends EditorBlock {
 
 let nextUid = 1;
 
+/** Icon shown next to each section type in the editor. */
+const BLOCK_ICONS: Record<string, IconName> = {
+  hero: 'hero',
+  rich_text: 'text',
+  image: 'image',
+  image_text: 'columns',
+  gallery: 'media',
+  cards: 'grid',
+  stats: 'hash',
+  timeline: 'clock',
+  cta: 'megaphone',
+  faq: 'help',
+  tabs: 'folder',
+  testimonial: 'quote',
+  video: 'play',
+  map: 'pin',
+  downloads: 'download',
+  contact_form: 'mail',
+  programmes: 'cap',
+  short_courses: 'award',
+  child_pages: 'sitemap',
+  divider: 'minus',
+  spacer: 'space',
+};
+
 @Component({
   selector: 'app-page-editor',
-  imports: [FormsModule, RouterLink, DatePipe, NgTemplateOutlet, FieldList, MediaField, PageBody],
+  imports: [FormsModule, RouterLink, DatePipe, NgTemplateOutlet, FieldList, MediaField, PageBody, Icon],
   templateUrl: './page-editor.html',
   styleUrl: './page-editor.scss',
 })
@@ -40,12 +67,19 @@ export class PageEditor implements OnInit, OnDestroy {
   protected readonly revisions = signal<Revision[]>([]);
   protected readonly tab = signal<'content' | 'settings' | 'history'>('content');
   protected readonly device = signal<'desktop' | 'mobile'>('desktop');
-  protected readonly expanded = signal<Set<number>>(new Set());
+  /** The section open in the editor panel (by uid), or null when showing the list of sections. */
+  protected readonly selected = signal<number | null>(null);
+  protected readonly selectedIndex = computed(() => this.blocks().findIndex((b) => b.uid === this.selected()));
+  protected readonly current = computed(() => this.blocks()[this.selectedIndex()] ?? null);
+  private readonly visibleBlocks = computed(() => this.blocks().filter((b) => !b.isHidden));
+  private readonly previewEl = viewChild<ElementRef<HTMLElement>>('previewInner');
   protected readonly palette = signal<number | null>(null);
   protected readonly dirty = signal(false);
   protected readonly busy = signal(false);
   protected readonly version = signal(0);
-  protected readonly message = signal<{ kind: 'success' | 'error' | 'warning' | 'info'; text: string; list?: string[] } | null>(null);
+  protected readonly message = toastChannel();
+  /** Shown in place of the editor when it could not be loaded at all. */
+  protected readonly loadError = signal('');
   /** Server validation errors per block index, keyed by field path. */
   protected readonly blockErrors = signal<Record<number, Record<string, string>>>({});
   protected readonly lockedBy = signal<PageDetail['lockedBy']>(null);
@@ -129,8 +163,10 @@ export class PageEditor implements OnInit, OnDestroy {
       this.lang.set('en');
       this.translation.set(null);
       this.apply(page);
+      this.loadError.set('');
       await this.refreshLock();
     } catch (err) {
+      if (!this.page()) this.loadError.set(errorMessage(err));
       this.message.set({ kind: 'error', text: errorMessage(err) });
     }
   }
@@ -148,11 +184,18 @@ export class PageEditor implements OnInit, OnDestroy {
     this.visibility = page.visibility;
     this.publishAt = toLocalInput(page.publishAt);
     this.unpublishAt = toLocalInput(page.unpublishAt);
-    this.blocks.set(page.blocks.map((b) => ({ ...b, content: structuredClone(b.content), uid: nextUid++ })));
+    this.setBlocks(page.blocks);
     this.blockErrors.set({});
     this.dirty.set(false);
     this.version.update((v) => v + 1);
     this.titleService.setTitle(`${page.title} | Edit page`);
+  }
+
+  /** Loads blocks from the server, keeping the same section open (by position) if it still exists. */
+  private setBlocks(list: EditorBlock[]) {
+    const at = this.selectedIndex();
+    this.blocks.set(list.map((b) => ({ ...b, content: structuredClone(b.content), uid: nextUid++ })));
+    this.selected.set(at >= 0 ? (this.blocks()[at]?.uid ?? null) : null);
   }
 
   private async refreshLock() {
@@ -196,7 +239,7 @@ export class PageEditor implements OnInit, OnDestroy {
     this.title = t.title;
     this.seoTitle = t.seoTitle ?? '';
     this.metaDescription = t.metaDescription ?? '';
-    this.blocks.set(t.blocks.map((b) => ({ ...b, content: structuredClone(b.content), uid: nextUid++ })));
+    this.setBlocks(t.blocks);
     this.blockErrors.set({});
     this.dirty.set(!t.exists);
     this.version.update((v) => v + 1);
@@ -244,24 +287,67 @@ export class PageEditor implements OnInit, OnDestroy {
     return '';
   }
 
-  protected isExpanded(uid: number) {
-    return this.expanded().has(uid);
+  protected icon(type: string): IconName {
+    return BLOCK_ICONS[type] ?? 'pages';
   }
 
-  protected toggle(uid: number, force?: boolean) {
-    this.expanded.update((s) => {
-      const n = new Set(s);
-      if (force ?? !n.has(uid)) n.add(uid);
-      else n.delete(uid);
-      return n;
-    });
+  /** Opens one section in the editor panel. */
+  protected open(uid: number) {
+    this.palette.set(null);
+    this.selected.set(uid);
   }
+
+  /** Back to the list of sections, with focus on the section that was open. */
+  protected back() {
+    const uid = this.selected();
+    this.selected.set(null);
+    if (uid) setTimeout(() => document.getElementById(`section-${uid}`)?.focus());
+  }
+
+  /** Previous / next section while one is open. */
+  protected step(by: number) {
+    const next = this.blocks()[this.selectedIndex() + by];
+    if (next) this.selected.set(next.uid);
+  }
+
+  /** Clicking a section in the live preview opens it; links in the preview never navigate away. */
+  protected previewClick(e: MouseEvent) {
+    const target = e.target as HTMLElement;
+    if (target.closest('a')) e.preventDefault();
+    const host = target.closest('app-block-view');
+    const root = this.previewEl()?.nativeElement;
+    if (!host || !root || this.tab() !== 'content') return;
+    const index = Array.from(root.querySelectorAll('app-block-view')).indexOf(host);
+    const block = this.visibleBlocks()[index];
+    if (block) this.open(block.uid);
+  }
+
+  /** Outlines the open section in the live preview and scrolls it into view. */
+  private readonly highlight = effect(() => {
+    const uid = this.selected();
+    const root = this.previewEl()?.nativeElement;
+    this.previewBlocks();
+    if (!root) return;
+    const index = this.visibleBlocks().findIndex((b) => b.uid === uid);
+    setTimeout(() => {
+      const hosts = Array.from(root.querySelectorAll<HTMLElement>('app-block-view'));
+      hosts.forEach((h, i) => h.classList.toggle('is-editing', i === index));
+      const el = hosts[index];
+      const b = this.visibleBlocks()[index];
+      if (el && b) el.dataset['editing'] = `Editing: ${this.def(b.type)?.label ?? b.type}`;
+      const frame = root.parentElement;
+      if (!el || !frame) return;
+      const top = el.getBoundingClientRect().top - frame.getBoundingClientRect().top + frame.scrollTop - 12;
+      const outOfView = top < frame.scrollTop || top > frame.scrollTop + frame.clientHeight - 80;
+      if (outOfView) frame.scrollTo({ top, behavior: 'smooth' });
+    });
+  });
 
   protected addBlock(def: BlockDef, at: number) {
     const block: LocalBlock = { uid: nextUid++, type: def.type, isHidden: false, content: def.defaults() };
     this.blocks.update((list) => [...list.slice(0, at), block, ...list.slice(at)]);
     this.palette.set(null);
-    this.toggle(block.uid, true);
+    this.selected.set(block.uid);
     this.shiftErrors(at, 1);
     this.touch();
   }
@@ -286,7 +372,8 @@ export class PageEditor implements OnInit, OnDestroy {
 
   protected remove(index: number) {
     const b = this.blocks()[index];
-    if (!confirm(`Remove this ${this.def(b.type)?.label ?? b.type} block?`)) return;
+    if (!confirm(`Remove this ${this.def(b.type)?.label ?? b.type} section?`)) return;
+    if (this.selected() === b.uid) this.selected.set(null);
     this.blocks.update((list) => list.filter((_, i) => i !== index));
     this.blockErrors.set({});
     this.touch();
@@ -321,9 +408,7 @@ export class PageEditor implements OnInit, OnDestroy {
           metaDescription: this.metaDescription || null,
           blocks: this.blocks().map((b) => ({ type: b.type, isHidden: b.isHidden, content: b.content })),
         });
-        const open = this.blocks().map((b, i) => (this.isExpanded(b.uid) ? i : -1)).filter((i) => i >= 0);
         this.applyTranslation(saved);
-        this.expanded.set(new Set(open.map((i) => this.blocks()[i]?.uid).filter((u): u is number => !!u)));
         this.message.set({ kind: 'success', text: saved.isLive ? `Draft saved. Visitors still see the published ${saved.name} version until you publish.` : 'Draft saved.' });
         return true;
       } catch (err) {
@@ -343,9 +428,7 @@ export class PageEditor implements OnInit, OnDestroy {
         blocks: this.blocks().map((b) => ({ type: b.type, isHidden: b.isHidden, content: b.content })),
         note,
       });
-      const open = this.blocks().map((b, i) => (this.isExpanded(b.uid) ? i : -1)).filter((i) => i >= 0);
       this.apply(saved);
-      this.expanded.set(new Set(open.map((i) => this.blocks()[i]?.uid).filter((u): u is number => !!u)));
       this.message.set({ kind: 'success', text: saved.isLive ? 'Draft saved. Visitors still see the published version until you publish.' : 'Draft saved.' });
       return true;
     } catch (err) {
@@ -362,14 +445,15 @@ export class PageEditor implements OnInit, OnDestroy {
       const errors: Record<number, Record<string, string>> = {};
       for (const issue of body.issues) (errors[issue.block] ??= {})[issue.path] = issue.message;
       this.blockErrors.set(errors);
-      for (const index of Object.keys(errors)) {
-        const uid = this.blocks()[Number(index)]?.uid;
-        if (uid) this.toggle(uid, true);
+      if (!errors[this.selectedIndex()]) {
+        const first = this.blocks()[Math.min(...Object.keys(errors).map(Number))];
+        if (first) this.selected.set(first.uid);
       }
+      this.tab.set('content');
       this.message.set({
         kind: 'error',
-        text: 'Some blocks need attention before saving:',
-        list: body.issues.map((i) => `${this.def(i.type)?.label ?? i.type} (block ${i.block + 1}): ${i.path ? i.path + ' — ' : ''}${i.message}`),
+        text: 'Some sections need attention before saving:',
+        list: body.issues.map((i) => `${this.def(i.type)?.label ?? i.type} (section ${i.block + 1}): ${i.path ? i.path + ' — ' : ''}${i.message}`),
       });
     } else {
       this.message.set({ kind: 'error', text: errorMessage(err) });

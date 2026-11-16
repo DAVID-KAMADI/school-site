@@ -6,6 +6,7 @@ import { errorMessage } from '../../core/api-url.interceptor';
 import { AdminApi, type SettingRow } from '../api';
 import { MediaField } from '../fields/media-field';
 import { MediaCache } from '../media/media-cache';
+import { toastChannel } from '../toast';
 
 const GROUP_NAMES: Record<string, string> = {
   institution: 'Institution',
@@ -25,9 +26,6 @@ const GROUP_NAMES: Record<string, string> = {
   imports: [FormsModule, MediaField, KeyValuePipe],
   template: `
     <h1>Site settings</h1>
-    @if (message(); as m) {
-      <div class="a-alert" [class]="'a-alert--' + m.kind" role="status">{{ m.text }}</div>
-    }
     @for (group of groups(); track group.name) {
       <section class="a-panel a-stack">
         <h2>{{ groupName(group.name) }}</h2>
@@ -36,6 +34,12 @@ const GROUP_NAMES: Record<string, string> = {
             <div class="a-label">{{ label(s.key) }}</div>
             @if (s.description) {
               <div class="a-help">{{ s.description }}</div>
+            }
+            @if (s.key === 'institution.favicon_media_id') {
+              <div class="a-help">
+                Use a square PNG, at least 192 × 192 pixels (512 × 512 is best), with a simple shape that is still clear at
+                tab size. Leave empty to use the default icon. Visitors may need to reload to see a new icon.
+              </div>
             }
             @if (s.key.endsWith('media_id')) {
               <app-media-field kind="image" [value]="$any(s.value)" (valueChange)="s.value = $event; save(s)" />
@@ -95,7 +99,7 @@ export class SettingsEditor {
   private readonly api = inject(AdminApi);
   private readonly cache = inject(MediaCache);
   protected readonly rows = signal<SettingRow[]>([]);
-  protected readonly message = signal<{ kind: string; text: string } | null>(null);
+  protected readonly message = toastChannel();
   protected readonly groups = computed(() => {
     const map = new Map<string, SettingRow[]>();
     for (const r of this.rows()) map.set(r.groupName, [...(map.get(r.groupName) ?? []), r]);
@@ -133,6 +137,7 @@ export class SettingsEditor {
       'number prefix': 'Application number prefix',
       welcome: 'Welcome text on the Apply page',
       declaration: 'Declaration',
+      favicon: 'Favicon (browser tab icon)',
       'offer letter': 'Offer letter',
       'offer acceptance days': 'Days to accept an offer',
       'student url': 'Student portal address',

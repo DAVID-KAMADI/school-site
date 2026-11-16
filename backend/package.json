@@ -28,10 +28,12 @@
     "portal-key": "nest build && node dist/cli/portal-key.js",
     "seed:demo": "nest build && node dist/cli/seed-demo.js",
     "seed:legal": "nest build && node dist/cli/seed-legal.js",
+    "legal:cookies": "nest build && node dist/cli/update-privacy-cookies.js",
     "seed:timetable-demo": "nest build && node dist/cli/seed-timetable-demo.js",
     "media:regenerate": "nest build && node dist/cli/regenerate-media.js",
     "backup": "nest build && node dist/cli/backup.js",
-    "backup:check": "nest build && node dist/cli/restore-check.js"
+    "backup:check": "nest build && node dist/cli/restore-check.js",
+    "restore": "nest build && node dist/cli/restore.js"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
@@ -47,6 +49,7 @@
     "cookie-parser": "^1.4.7",
     "helmet": "^8.3.0",
     "mysql2": "^3.24.5",
+    "nodemailer": "^10.4.0",
     "pdfkit": "^0.20.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
@@ -64,6 +67,7 @@
     "@types/express": "^5.0.0",
     "@types/multer": "^2.3.0",
     "@types/node": "^24.0.0",
+    "@types/nodemailer": "^8.0.2",
     "@types/pdfkit": "^0.17.6",
     "@types/sanitize-html": "^2.16.2",
     "@types/supertest": "^7.0.0",

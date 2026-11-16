@@ -152,12 +152,24 @@ npm run seed:legal    # creates the three pages and the footer legal links (neve
 
 See [SECURITY.md](SECURITY.md) for what protects the site, test results and accepted risks.
 
-## Backups
+## Backups and rollback
+
+**Admin → Backups & restore** (super administrators only):
+
+- **Back up now**: database + all uploaded files. A backup is also made automatically every night at `BACKUP_HOUR` (default 2 = 02:00 server time; `BACKUP_AUTO=false` turns it off).
+- **Restore…**: rolls the whole site back to a backup, e.g. after a data breach, damaged data or a bad change. Asks for your password, authenticator code and the word RESTORE. It checks the backup's checksums, **saves the current state as a "before-restore" backup first** (nothing is lost and a breach can still be investigated), replaces the database (and, optionally, the uploaded files), applies newer database updates, and **signs everyone out**. While it runs the API answers "under maintenance". If loading fails, the saved state is put back automatically.
+- **Sign everyone out**: emergency button for a suspected break-in (you stay signed in).
+
+Kept: the newest `BACKUP_KEEP` (14) plus one a week for `BACKUP_KEEP_WEEKS` (8), so a backup from before a breach found weeks later still exists. Backups are in `BACKUP_DIR` (default `backend/backups`). **Set `BACKUP_COPY_DIR`** to a second disk or a synced cloud folder: a backup on the same disk is lost with the disk.
+
+From the command line (e.g. when the admin itself is broken):
 
 ```
 cd backend
-npm run backup          # database + uploaded files -> backups/<date-time>/ (keeps the newest 14)
-npm run backup:check    # restores the newest backup into a scratch database and checks it
+npm run backup                          # make a backup (optional: -- --note "Before results upload")
+npm run restore                         # list backups
+npm run restore -- <backup> --yes       # STOP THE API FIRST; add --database-only to keep current files
+npm run backup:check                    # restores the newest backup into a scratch database and checks it
 ```
 
 `backup:check` needs a separate scratch database, created once as the MySQL root user:
@@ -167,15 +179,7 @@ CREATE DATABASE school_site_training_restore_check CHARACTER SET utf8mb4 COLLATE
 GRANT ALL PRIVILEGES ON school_site_training_restore_check.* TO 'school_app'@'localhost';
 ```
 
-To restore for real (site stopped), load `database.sql.gz` into the database and unpack
-`storage.tar.gz` into the backend folder:
-
-```
-gunzip -c database.sql.gz | mysql -h <host> -P <port> -u <user> -p <database>
-tar -xzf storage.tar.gz -C <backend folder>
-```
-
-Copy backups to a second place (another server or cloud storage). A backup on the same disk is lost with the disk.
+After a data breach, restoring a backup is only one step: also reset passwords, consider switching staff sign-in links on, change server secrets if they may have leaked, find and fix how they got in, and follow the Data Protection Act's breach notification rules.
 
 ## Going live
 
@@ -203,7 +207,8 @@ The API will not start with `NODE_ENV=production` while any of these are unsafe.
 - `TRUST_PROXY=1`
 - `WEBSITE_SERVER_SECRET`: the same value as in the API settings (the website server will not start in production without it)
 - `NG_ALLOWED_HOSTS=<real domain>,www.<real domain>`
-- `WEB_WORKERS=auto`: one page-rendering process per CPU core, minus one for the API. One process uses only one core and slows down past about 50 visitors at once. Leave it unset when running under PM2 cluster mode, which does the same.
+- `WEB_WORKERS=auto`: one page-rendering process per CPU core, minus one for the API. One process uses only one core and slows down past about 50 visitors at once. Leave it unset when running under PM2 cluster mode, which does the same. Each process needs about 300 MB of memory.
+- `WEB_PAGE_CACHE_SECONDS` (optional, default 30 in production): how long a rendered public page is reused before it is rendered again. Published changes therefore show on the site within this time. Private pages (admin, the applicant's own pages, sign-in, previews) are never cached, and each visitor still gets their own security nonce. `0` turns it off. In load tests it raised the number of visitors the site could serve from about 200 to over 500 at once.
 
 **Server**
 

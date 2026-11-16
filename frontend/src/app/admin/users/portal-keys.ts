@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { errorMessage } from '../../core/api-url.interceptor';
 import { AdminApi, type PortalKey, type PortalKeyEvent, type UserRow } from '../api';
+import { toastChannel } from '../toast';
 
 const STATUS_LABEL: Record<PortalKey['status'], string> = {
   active: 'Active',
@@ -50,8 +51,34 @@ function localInput(d: Date): string {
       own. Once someone has signed in through a link it is theirs, and nobody else can use it.
     </p>
 
-    @if (message(); as m) {
-      <div class="a-alert" [class]="'a-alert--' + m.kind" role="status">{{ m.text }}</div>
+    @if (linksRequired() !== null) {
+      <section class="a-panel requirement" [class.requirement--off]="!linksRequired()">
+        <div class="requirement__text">
+          <h2>Sign-in link requirement</h2>
+          @if (linksRequired()) {
+            <p><span class="a-badge status--active">On</span> Staff can only reach the sign-in page through their sign-in link. <code>/admin</code> shows “page not found”.</p>
+          } @else {
+            <p>
+              <span class="a-badge status--revoked">Off</span> Anyone can open the sign-in page at
+              <a [href]="loginPage()" target="_blank" rel="noopener"><code>{{ loginPage() }}</code></a>. Staff still need their
+              email, password and authenticator code. Existing links keep working.
+            </p>
+          }
+        </div>
+        @if (confirmingOff()) {
+          <div class="requirement__confirm" role="alert">
+            <p class="a-small"><strong>Switch sign-in links off?</strong> The sign-in page becomes public, so anyone can try passwords there.</p>
+            <div class="a-row">
+              <button type="button" class="a-btn a-btn--danger" [disabled]="busy()" (click)="setLinksRequired(false)">Switch off</button>
+              <button type="button" class="a-btn" (click)="confirmingOff.set(false)">Cancel</button>
+            </div>
+          </div>
+        } @else if (linksRequired()) {
+          <button type="button" class="a-btn" [disabled]="busy()" (click)="confirmingOff.set(true)">Switch off</button>
+        } @else {
+          <button type="button" class="a-btn a-btn--primary" [disabled]="busy()" (click)="setLinksRequired(true)">Switch on</button>
+        }
+      </section>
     }
 
     @if (created(); as c) {
@@ -198,6 +225,12 @@ function localInput(d: Date): string {
   `,
   styles: `
     .intro { max-width: 70ch; }
+    .requirement { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; }
+    .requirement--off { border: 2px solid var(--a-warning); }
+    .requirement__text { flex: 1 1 28rem; }
+    .requirement__text h2 { margin: 0 0 0.35rem; font-size: 1.1rem; }
+    .requirement__text p { margin: 0; }
+    .requirement__confirm p { margin: 0 0 0.5rem; max-width: 40ch; }
     .generate { margin-top: 1rem; flex-wrap: wrap; align-items: end; }
     .generate .name { flex: 2 1 16rem; }
     .generate .uses { flex: 0 0 9rem; }
@@ -228,10 +261,13 @@ export class PortalKeys {
   protected readonly confirming = signal<string | null>(null);
   protected readonly copied = signal(false);
   protected readonly busy = signal(false);
-  protected readonly message = signal<{ kind: string; text: string } | null>(null);
+  protected readonly message = toastChannel();
   /** Active staff, for personal links. Empty (and the choice hidden) without permission to list users. */
   protected readonly staff = signal<UserRow[]>([]);
   protected userId: number | null = null;
+  /** Whether staff need a sign-in link to reach the sign-in page; null until loaded. */
+  protected readonly linksRequired = signal<boolean | null>(null);
+  protected readonly confirmingOff = signal(false);
 
   protected name = '';
   protected expires = localInput(new Date(Date.now() + 7 * 86_400_000));
@@ -246,6 +282,31 @@ export class PortalKeys {
       .users()
       .then((users) => this.staff.set(users.filter((u) => u.status !== 'disabled' && u.roles.length)))
       .catch(() => undefined);
+  }
+
+  /** The sign-in page address used while sign-in links are switched off. */
+  protected loginPage() {
+    return `${location.origin}/admin/login`;
+  }
+
+  async setLinksRequired(required: boolean) {
+    this.busy.set(true);
+    this.message.set(null);
+    try {
+      const res = await this.api.setPortalLinkRequired(required);
+      this.linksRequired.set(res.required);
+      this.confirmingOff.set(false);
+      this.message.set({
+        kind: 'success',
+        text: res.required
+          ? 'Sign-in links are required again. /admin/login now shows “page not found”.'
+          : 'Sign-in links are switched off. Staff can sign in at /admin/login.',
+      });
+    } catch (err) {
+      this.message.set({ kind: 'error', text: errorMessage(err) });
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   /** The full sign-in address for a token. */
@@ -267,7 +328,12 @@ export class PortalKeys {
 
   private async load() {
     try {
-      const [keys, events] = await Promise.all([this.api.portalKeys(), this.api.portalKeyActivity(this.selected()?.id)]);
+      const [keys, events, settings] = await Promise.all([
+        this.api.portalKeys(),
+        this.api.portalKeyActivity(this.selected()?.id),
+        this.api.portalLinkSettings(),
+      ]);
+      this.linksRequired.set(settings.required);
       this.keys.set(keys);
       this.events.set(events);
     } catch (err) {

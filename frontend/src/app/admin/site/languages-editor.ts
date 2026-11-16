@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { errorMessage } from '../../core/api-url.interceptor';
 import { AdminApi, type LanguageRow, type LanguagesInfo } from '../api';
+import { toastChannel } from '../toast';
 
 /** Common choices, each named in its own language as visitors will see it. */
 const SUGGESTED: LanguageRow[] = [
@@ -50,10 +51,6 @@ const SETTING_NAMES: Record<string, string> = {
       open a page and choose the language at the top of the editor. Menu labels are translated under Menus, and buttons and
       messages under Interface text.
     </p>
-    @if (message(); as m) {
-      <div class="a-alert" [class]="'a-alert--' + m.kind" role="status">{{ m.text }}</div>
-    }
-
     <section class="a-panel a-stack">
       <h2>Languages on the site</h2>
       <div class="a-table-wrap">
@@ -134,7 +131,7 @@ export class LanguagesEditor {
   /** The list as last saved: only saved languages can have their details translated. */
   protected readonly saved = signal<LanguageRow[]>([]);
   protected readonly busy = signal(false);
-  protected readonly message = signal<{ kind: string; text: string } | null>(null);
+  protected readonly message = toastChannel();
   protected readonly available = computed(() => SUGGESTED.filter((s) => !this.list().some((l) => l.code === s.code)));
   protected drafts: Record<string, Record<string, string>> = {};
   protected choice = '';

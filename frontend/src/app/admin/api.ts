@@ -4,6 +4,29 @@ import { firstValueFrom } from 'rxjs';
 import type { BlogPost, BlogPostSummary } from '../core/blog';
 import type { MediaMap, MediaView } from '../core/models';
 
+export type PopupKind = 'announcement' | 'event' | 'offer' | 'course' | 'news';
+
+/** A website pop-up from Admin → Pop-ups. */
+export interface PopupRow {
+  id: number;
+  kind: PopupKind;
+  label: string | null;
+  title: string;
+  details: string;
+  imageId: number | null;
+  image: MediaView | null;
+  eventAt: string | null;
+  buttonLabel: string | null;
+  buttonLink: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  isActive: boolean;
+  isPriority: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface PageSummary {
   id: number;
   title: string;
@@ -234,6 +257,9 @@ export class AdminApi {
   redirects = () => this.get<{ id: number; fromPath: string; toPath: string; statusCode: number; hitCount: number }[]>('/redirects');
   saveRedirect = (body: { fromPath: string; toPath: string; statusCode: number }) => this.post('/redirects', body);
   deleteRedirect = (id: number) => this.delete(`/redirects/${id}`);
+  popups = () => this.get<PopupRow[]>('/popups');
+  savePopup = (id: number | null, body: unknown) => (id ? this.put<PopupRow>(`/popups/${id}`, body) : this.post<PopupRow>('/popups', body));
+  deletePopup = (id: number) => this.delete(`/popups/${id}`);
 
   // Users
   users = () => this.get<UserRow[]>('/users');
@@ -263,11 +289,152 @@ export class AdminApi {
   portalKeys = () => this.get<PortalKey[]>('/portal-access-keys');
   createPortalKey = (body: { name: string; expiresAt: string; maxUses: number; userId?: number }) =>
     this.post<{ key: string; record: PortalKey }>('/portal-access-keys', body);
+  portalLinkSettings = () => this.get<{ required: boolean }>('/portal-access-keys/settings');
+  setPortalLinkRequired = (required: boolean) => this.put<{ required: boolean }>('/portal-access-keys/settings', { required });
+  // Maintenance mode
+  maintenance = () => this.get<MaintenanceMode & { active: boolean; restoring: boolean }>('/maintenance');
+  saveMaintenance = (body: { enabled: boolean; title: string; message: string; endsAt: string | null; autoEnd: boolean }) =>
+    this.put<MaintenanceMode & { active: boolean }>('/maintenance', body);
+  // Backups & restore (super administrators)
+  backups = () => this.get<BackupStatus & { backups: BackupRow[] }>('/backups');
+  backupStatus = () => this.get<BackupStatus>('/backups/status');
+  createBackup = (note?: string) => this.post<BackupStatus>('/backups', { note });
+  restoreBackup = (name: string, body: { password: string; code?: string; confirm: string; includeFiles: boolean }) =>
+    this.post<BackupStatus>(`/backups/${encodeURIComponent(name)}/restore`, body);
+  signOutEveryone = (body: { password: string; code?: string }) =>
+    this.post<{ signedOut: number }>('/backups/sign-out-everyone', body);
+  // SMS & email (super administrators)
+  messagingSettings = () => this.get<MessagingSettings>('/messaging/settings');
+  saveSmsSettings = (body: { username: string; apiKey?: string; senderId: string; environment: 'sandbox' | 'live' }) =>
+    this.put<MessagingSettings>('/messaging/settings/sms', body);
+  saveEmailSettings = (body: Omit<MessagingSettings['email'], 'passwordSet' | 'ready'> & { password?: string }) =>
+    this.put<MessagingSettings>('/messaging/settings/email', body);
+  testSms = (to: string, message: string) => this.post<SendOutcome>('/messaging/test-sms', { to, message });
+  testEmail = (to: string) => this.post<SendOutcome>('/messaging/test-email', { to });
+  // Follow-ups
+  followUps = (q: { stage: FollowUpStage; intakeId?: string; inactiveDays?: string; search?: string }) =>
+    this.get<{ people: FollowUpPerson[]; total: number; channels: { sms: boolean; email: boolean } }>('/follow-ups', {
+      stage: q.stage,
+      intakeId: q.intakeId ?? '',
+      inactiveDays: q.inactiveDays ?? '',
+      search: q.search ?? '',
+    });
+  previewFollowUp = (body: { stage: FollowUpStage; userId: number; smsText?: string; emailSubject?: string; emailBody?: string }) =>
+    this.post<{ smsText: string; emailSubject: string; emailBody: string }>('/follow-ups/preview', body);
+  sendFollowUp = (body: {
+    stage: FollowUpStage;
+    userIds: number[];
+    channels: ('sms' | 'email')[];
+    smsText?: string;
+    emailSubject?: string;
+    emailBody?: string;
+  }) => this.post<FollowUpSummary>('/follow-ups/send', body);
+  messageHistory = () => this.get<MessageLogRow[]>('/follow-ups/history');
   revokePortalKey = (id: string) => this.post<PortalKey>(`/portal-access-keys/${id}/revoke`);
   portalKeyActivity = (id?: string) => this.get<PortalKeyEvent[]>(id ? `/portal-access-keys/${id}/activity` : '/portal-access-keys/activity');
 }
 
 type Person = { id: number; fullName: string } | null;
+
+export interface MessagingSettings {
+  sms: { username: string; senderId: string; environment: 'sandbox' | 'live'; apiKeySet: boolean; apiKeyHint: string | null; ready: boolean };
+  email: {
+    host: string;
+    port: number;
+    security: 'tls' | 'starttls' | 'none';
+    username: string;
+    fromName: string;
+    fromEmail: string;
+    replyTo: string;
+    passwordSet: boolean;
+    ready: boolean;
+  };
+}
+
+export interface SendOutcome {
+  ok: boolean;
+  recipient: string;
+  providerMessageId: string | null;
+  providerStatus: string | null;
+  cost: string | null;
+  error: string | null;
+}
+
+export type FollowUpStage = 'draft' | 'info_requested' | 'not_started';
+
+export interface FollowUpPerson {
+  userId: number;
+  applicationId: number | null;
+  fullName: string;
+  email: string;
+  phone: string | null;
+  programme: string | null;
+  intake: string | null;
+  intakeClosesAt: string | null;
+  progress: { done: number; total: number; missing: string[] } | null;
+  lastActivityAt: string;
+  lastFollowUpAt: string | null;
+  followUps: number;
+}
+
+export interface FollowUpSummary {
+  people: number;
+  skipped: number;
+  sms: { sent: number; failed: number } | null;
+  email: { sent: number; failed: number } | null;
+  results: {
+    userId: number;
+    name: string;
+    sms?: { ok: boolean; recipient: string; error: string | null };
+    email?: { ok: boolean; recipient: string; error: string | null };
+  }[];
+}
+
+export interface MessageLogRow {
+  id: number;
+  at: string;
+  channel: 'sms' | 'email';
+  purpose: 'follow_up' | 'test';
+  recipient: string;
+  recipientName: string | null;
+  applicationId: number | null;
+  subject: string | null;
+  body: string;
+  status: 'sent' | 'failed';
+  providerStatus: string | null;
+  cost: string | null;
+  error: string | null;
+  sentBy: string | null;
+}
+
+export interface MaintenanceMode {
+  enabled: boolean;
+  title: string;
+  message: string;
+  endsAt: string | null;
+  startedAt: string | null;
+  autoEnd: boolean;
+}
+
+export interface BackupRow {
+  name: string;
+  createdAt: string;
+  reason: 'manual' | 'scheduled' | 'before-restore' | 'command-line';
+  createdBy: string | null;
+  note: string | null;
+  sizeBytes: number;
+  tables: number;
+  rows: number;
+  files: number;
+  hasFiles: boolean;
+}
+
+export interface BackupStatus {
+  job: { kind: 'backup' | 'restore'; step: string; startedAt: string; by: string; target: string | null } | null;
+  last: { kind: 'backup' | 'restore'; ok: boolean; finishedAt: string; by: string; message: string } | null;
+  schedule: { automatic: boolean; hour: number };
+  offsiteCopy: boolean;
+}
 
 export interface PortalKey {
   id: string;

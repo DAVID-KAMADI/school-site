@@ -380,14 +380,15 @@ export class AdmissionsSetupController {
   }
 }
 
-/** Current intake announcement for the public website. */
+/** Current intake announcements for the public website. */
 @Public()
 @Controller('public/admissions')
 export class PublicAdmissionsController {
   constructor(private readonly config: AdmissionsConfigService) {}
 
-  @Get('intake-popup')
-  intakePopup() {
-    return this.config.activeIntakePopup();
+  /** Pop-ups for every open intake that has one switched on. */
+  @Get('intake-popups')
+  intakePopups() {
+    return this.config.activeIntakePopups();
   }
 }

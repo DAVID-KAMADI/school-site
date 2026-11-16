@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { ADMISSIONS_SETUP_PERMISSIONS, AuthStore, CONTENT_PERMISSIONS } from '../core/auth';
 import { SiteStore } from '../core/site';
+import { Toaster } from './toast';
 import { Icon, type IconName } from './icon';
 
 interface NavItem {
@@ -11,6 +12,8 @@ interface NavItem {
   path: string;
   /** Shown to people with at least one of these. */
   permission: string | readonly string[];
+  /** Shown to super administrators only. */
+  superAdmin?: boolean;
   icon: IconName;
   exact?: boolean;
 }
@@ -34,7 +37,9 @@ const NAV: { heading: string; items: NavItem[] }[] = [
     items: [
       { label: 'Applications', path: '/admin/applications', permission: 'applications.view', icon: 'inbox' },
       { label: 'Applicants', path: '/admin/applicants', permission: 'applicants.manage', icon: 'users' },
+      { label: 'Follow-ups', path: '/admin/follow-ups', permission: 'applicants.manage', icon: 'activity' },
       { label: 'Admissions setup', path: '/admin/admissions-setup', permission: ADMISSIONS_SETUP_PERMISSIONS, icon: 'cap' },
+      { label: 'Pop-ups', path: '/admin/popups', permission: 'settings.edit', icon: 'megaphone' },
     ],
   },
   {
@@ -48,6 +53,7 @@ const NAV: { heading: string; items: NavItem[] }[] = [
       { label: 'Languages', path: '/admin/languages', permission: 'settings.edit', icon: 'globe' },
       { label: 'Interface text', path: '/admin/text', permission: 'text_strings.edit', icon: 'text' },
       { label: 'Redirects', path: '/admin/redirects', permission: 'redirects.edit', icon: 'redirect' },
+      { label: 'Maintenance mode', path: '/admin/maintenance', permission: 'settings.edit', icon: 'alert' },
     ],
   },
   {
@@ -57,6 +63,8 @@ const NAV: { heading: string; items: NavItem[] }[] = [
       { label: 'Access control', path: '/admin/access-control', permission: ['access.manage', 'users.manage'], icon: 'shield' },
       { label: 'Staff sign-in links', path: '/admin/access-management', permission: 'portal_keys.manage', icon: 'key' },
       { label: 'Audit log', path: '/admin/audit', permission: 'audit.view', icon: 'shield' },
+      { label: 'SMS & email', path: '/admin/messaging', permission: 'admin.access', superAdmin: true, icon: 'inbox' },
+      { label: 'Backups & restore', path: '/admin/backups', permission: 'admin.access', superAdmin: true, icon: 'clock' },
     ],
   },
 ];
@@ -67,7 +75,7 @@ const roleLabel = (key: string) => key.charAt(0).toUpperCase() + key.slice(1).re
 /** Admin shell: grouped navigation filtered by the user's permissions, and the top bar. */
 @Component({
   selector: 'app-admin-layout',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, Icon],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, Icon, Toaster],
   template: `
     <div class="shell">
       <aside class="side" [class.side--open]="navOpen()" id="admin-nav">
@@ -121,6 +129,7 @@ const roleLabel = (key: string) => key.charAt(0).toUpperCase() + key.slice(1).re
           <button type="button" class="a-btn a-btn--icon" (click)="logout()" aria-label="Sign out" title="Sign out"><app-icon name="logout" /></button>
         </header>
         <main class="content"><router-outlet /></main>
+        <app-toaster />
       </div>
     </div>
   `,
@@ -199,7 +208,14 @@ export class AdminLayout {
   protected readonly navOpen = signal(false);
 
   protected readonly groups = computed(() =>
-    NAV.map((g) => ({ ...g, items: g.items.filter((i) => this.auth.canAny(typeof i.permission === 'string' ? [i.permission] : i.permission)) })).filter((g) => g.items.length),
+    NAV.map((g) => ({
+      ...g,
+      items: g.items.filter(
+        (i) =>
+          this.auth.canAny(typeof i.permission === 'string' ? [i.permission] : i.permission) &&
+          (!i.superAdmin || !!this.auth.user()?.roles.includes('super_admin')),
+      ),
+    })).filter((g) => g.items.length),
   );
   protected readonly role = computed(() => {
     const roles = this.auth.user()?.roles ?? [];

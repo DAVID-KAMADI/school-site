@@ -7,6 +7,8 @@ import type { AuthUser, MeResponse } from './models';
 export interface PortalAccessStatus {
   granted: boolean;
   expiresAt: string | null;
+  /** False when an administrator has switched sign-in links off: /admin/login is then open to anyone. */
+  required: boolean;
 }
 
 /** Signed-in staff user for the admin portal. The session itself lives in an HttpOnly cookie. */
@@ -66,7 +68,7 @@ export class AuthStore {
     try {
       return await firstValueFrom(this.http.get<PortalAccessStatus>('/api/v1/auth/portal-access'));
     } catch {
-      return { granted: false, expiresAt: null };
+      return { granted: false, expiresAt: null, required: true };
     }
   }
 
@@ -125,23 +127,30 @@ export function notFound(router: Router): RedirectCommand {
   return new RedirectCommand(router.parseUrl('/admin-page-not-found'), { skipLocationChange: true });
 }
 
-/** The admin portal: only for staff with a session. Everyone else sees "page not found". */
+/**
+ * The admin portal: only for staff with a session. Everyone else sees "page not found", or the
+ * sign-in page when sign-in links are switched off.
+ */
 export const adminGuard: CanActivateFn = async (): Promise<boolean | UrlTree | RedirectCommand> => {
   const auth = inject(AuthStore);
   const router = inject(Router);
   const me = auth.me() ?? (await auth.refresh());
-  if (!me) return notFound(router);
+  if (!me) return (await auth.portalAccess()).required ? notFound(router) : router.createUrlTree(['/admin/login']);
   if (me.twoFactorPending) return router.createUrlTree(['/admin/login']);
   if (me.twoFactorSetupRequired) return router.createUrlTree(['/admin/two-step-setup']);
   if (!auth.can('admin.access')) return notFound(router);
   return true;
 };
 
-/** Pages that only make sense part-way through signing in (the code step, setting up two-step login). */
-export const signingInGuard: CanActivateFn = async (): Promise<boolean | RedirectCommand> => {
+/**
+ * Pages that only make sense part-way through signing in (the code step, setting up two-step login).
+ * /admin/login is also the sign-in page itself when sign-in links are switched off.
+ */
+export const signingInGuard: CanActivateFn = async (route): Promise<boolean | RedirectCommand> => {
   const auth = inject(AuthStore);
   const router = inject(Router);
-  return (auth.me() ?? (await auth.refresh())) ? true : notFound(router);
+  if (auth.me() ?? (await auth.refresh())) return true;
+  return route.routeConfig?.path === 'login' && !(await auth.portalAccess()).required ? true : notFound(router);
 };
 
 /**

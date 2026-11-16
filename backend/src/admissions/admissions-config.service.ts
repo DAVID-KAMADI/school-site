@@ -290,36 +290,40 @@ export class AdmissionsConfigService {
     return this.intakes.save({ ...(id ? { id } : {}), ...data });
   }
 
-  async activeIntakePopup() {
+  /** Every intake that is open now and has its pop-up switched on, soonest closing first. */
+  async activeIntakePopups() {
     const now = new Date();
-    const intake = await this.intakes.findOne({
-      where: {
-        isActive: true,
-        popupEnabled: true,
-        opensAt: LessThanOrEqual(now),
-        closesAt: MoreThanOrEqual(now),
-      },
-      order: { opensAt: 'DESC' },
+    const intakes = (
+      await this.intakes.find({
+        where: {
+          isActive: true,
+          popupEnabled: true,
+          opensAt: LessThanOrEqual(now),
+          closesAt: MoreThanOrEqual(now),
+        },
+        order: { closesAt: 'ASC' },
+      })
+    ).filter(
+      (i) => !!i.popupTitle && !!i.popupDetails && i.popupImageId !== null,
+    );
+    const images = await this.mediaService.getMany(
+      intakes.map((i) => i.popupImageId!),
+    );
+    return intakes.flatMap((intake) => {
+      const image = images.get(intake.popupImageId!);
+      if (!image || image.kind !== 'image') return [];
+      return [
+        {
+          id: intake.id,
+          name: intake.name,
+          updatedAt: intake.updatedAt,
+          closesAt: intake.closesAt,
+          title: intake.popupTitle!,
+          details: intake.popupDetails!,
+          image,
+        },
+      ];
     });
-    if (
-      !intake ||
-      !intake.popupTitle ||
-      !intake.popupDetails ||
-      intake.popupImageId === null
-    )
-      return null;
-    const image = await this.mediaService.getMany([intake.popupImageId]);
-    const popupImage = image.get(intake.popupImageId);
-    if (!popupImage || popupImage.kind !== 'image') return null;
-    return {
-      id: intake.id,
-      name: intake.name,
-      updatedAt: intake.updatedAt,
-      closesAt: intake.closesAt,
-      title: intake.popupTitle,
-      details: intake.popupDetails,
-      image: popupImage,
-    };
   }
 
   async deleteIntake(id: number) {

@@ -4,15 +4,18 @@ import { isPlatformServer } from '@angular/common';
 import { Meta, Title } from '@angular/platform-browser';
 import { RedirectCommand, Router, type ResolveFn } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { isApiUnreachable } from '../core/api-url.interceptor';
 import type { PublicPage } from '../core/models';
 import { SiteStore } from '../core/site';
 import { PageBody } from '../shared/page-body';
 import { NotFound } from './not-found';
+import { ServerUnavailable } from './server-unavailable';
 
 export type PageResult =
   | { kind: 'page'; data: PublicPage }
   | { kind: 'not_found' }
   | { kind: 'sign_in_required' }
+  | { kind: 'unavailable' }
   | { kind: 'error' };
 
 /** Loads the published page for the current address, turning API redirects and 404s into real HTTP responses. */
@@ -43,13 +46,14 @@ export const cmsPageResolver: ResolveFn<PageResult | RedirectCommand> = async (_
     if (response) response.status = status === 404 ? 404 : status === 401 ? 401 : 503;
     if (status === 404) return { kind: 'not_found' };
     if (status === 401) return { kind: 'sign_in_required' };
+    if (isApiUnreachable(err)) return { kind: 'unavailable' };
     return { kind: 'error' };
   }
 };
 
 @Component({
   selector: 'app-cms-page',
-  imports: [PageBody, NotFound],
+  imports: [PageBody, NotFound, ServerUnavailable],
   template: `
     @switch (result().kind) {
       @case ('page') {
@@ -86,6 +90,9 @@ export const cmsPageResolver: ResolveFn<PageResult | RedirectCommand> = async (_
           <h1>Please sign in</h1>
           <p>This page is only available to signed-in applicants or students.</p>
         </section>
+      }
+      @case ('unavailable') {
+        <app-server-unavailable />
       }
       @default {
         <section class="container container--text status-page">
@@ -125,7 +132,9 @@ export class CmsPage {
         ? p.page.path === '/'
           ? name || p.page.seoTitle
           : `${p.page.seoTitle} | ${name}`
-        : this.isHome()
+        : this.result().kind === 'unavailable'
+          ? this.site.t('error.unavailable_title', 'We can’t reach the server right now')
+          : this.isHome()
           ? name || 'Welcome'
           : this.site.t('error.not_found_title', 'Page not found');
       this.title.setTitle(pageTitle);

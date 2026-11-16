@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { errorMessage } from '../../core/api-url.interceptor';
 import { AdminApi, type MenuItemEdit, type PageSummary } from '../api';
+import { toastChannel } from '../toast';
 
 interface MenuEdit {
   location: string;
@@ -23,9 +24,6 @@ const HELP: Record<string, string> = {
   imports: [FormsModule, NgTemplateOutlet],
   template: `
     <h1>Menus</h1>
-    @if (message(); as m) {
-      <div class="a-alert" [class]="'a-alert--' + m.kind" role="status">{{ m.text }}</div>
-    }
     @for (menu of menus(); track menu.location) {
       <section class="a-panel">
         <div class="a-toolbar a-toolbar--spread">
@@ -96,7 +94,7 @@ export class MenusEditor {
   private readonly api = inject(AdminApi);
   protected readonly menus = signal<MenuEdit[]>([]);
   protected readonly pages = signal<PageSummary[]>([]);
-  protected readonly message = signal<{ kind: string; text: string } | null>(null);
+  protected readonly message = toastChannel();
   protected readonly help = HELP;
   /** Languages other than English: each menu label can be written in them. */
 

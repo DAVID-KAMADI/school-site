@@ -1,5 +1,7 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
+import { SiteStore } from '../../core/site';
+import { CookieConsent } from '../cookie-consent';
 
 /** Extracts a YouTube or Vimeo video id. Only these hosts are accepted by the API. */
 export function parseVideo(url: string): { provider: 'youtube' | 'vimeo'; id: string } | null {
@@ -35,6 +37,12 @@ export function parseVideo(url: string): { provider: 'youtube' | 'vimeo'; id: st
         </button>
       }
     </div>
+    <!-- Visitors who chose "Essential only" are told the player sets its own cookies before they press play. -->
+    @if (!playing() && video() && consent.choice() === 'essential') {
+      <p class="video__note">
+        {{ site.t('cookies.video_note', 'Playing this video loads it from {provider}, which may set its own cookies.', { provider: providerName() }) }}
+      </p>
+    }
   `,
   styles: `
     .video { position: relative; aspect-ratio: 16 / 9; background: var(--ink); border-radius: var(--radius); overflow: hidden; }
@@ -46,15 +54,20 @@ export function parseVideo(url: string): { provider: 'youtube' | 'vimeo'; id: st
       width: 4.5rem; height: 4.5rem; border-radius: 50%; display: grid; place-items: center;
       background: var(--accent); color: var(--on-accent); font-size: 1.5rem;
     }
+    .video__note { margin: 0.5rem 0 0; font-size: 0.85rem; color: var(--muted); }
     .video__play:hover .video__icon, .video__play:focus-visible .video__icon { scale: 1.08; }
   `,
 })
 export class VideoEmbed {
   private readonly sanitizer = inject(DomSanitizer);
+  protected readonly site = inject(SiteStore);
+  protected readonly consent = inject(CookieConsent);
   readonly url = input.required<string>();
   readonly title = input('Video');
   protected readonly playing = signal(false);
   protected readonly video = computed(() => parseVideo(this.url()));
+
+  protected readonly providerName = computed(() => (this.video()?.provider === 'vimeo' ? 'Vimeo' : 'YouTube'));
 
   protected readonly thumbnail = computed(() => {
     const v = this.video();

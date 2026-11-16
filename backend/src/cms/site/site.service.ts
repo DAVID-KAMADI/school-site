@@ -28,6 +28,13 @@ import {
   TRANSLATABLE_SETTINGS,
 } from './languages.service.js';
 
+/**
+ * Setting groups kept off the Site settings page and out of the public payload: languages have their
+ * own page, "security" (e.g. whether staff need a sign-in link) is managed under Staff sign-in links, and
+ * "maintenance" under Maintenance mode, and "messaging" (SMS and email settings) under SMS & email.
+ */
+const PRIVATE_GROUPS = ['languages', 'security', 'maintenance', 'messaging'];
+
 export interface MenuItemInput {
   label: string;
   translations?: Record<string, string>;
@@ -168,7 +175,7 @@ export class SiteService {
   /** Settings edited on the Site settings page. Language settings have their own page. */
   async adminSettings() {
     return this.settings.find({
-      where: { groupName: Not('languages') },
+      where: { groupName: Not(In(PRIVATE_GROUPS)) },
       order: { groupName: 'ASC', key: 'ASC' },
     });
   }
@@ -194,7 +201,7 @@ export class SiteService {
   /** Updates one setting. The new value must have the same shape as the seeded one. */
   async saveSetting(key: string, value: unknown, userId: number) {
     const existing = await this.settings.findOneBy({ key });
-    if (!existing || existing.groupName === 'languages')
+    if (!existing || PRIVATE_GROUPS.includes(existing.groupName))
       throw new NotFoundException('Unknown setting.');
     const expected = this.shapeOf(existing.value);
     if (
@@ -336,7 +343,7 @@ export class SiteService {
       : 'en';
     return this.cache.getOrLoad(`site:${locale}`, async () => {
       const settings = await this.settings.find({
-        where: { groupName: Not('languages') },
+        where: { groupName: Not(In(PRIVATE_GROUPS)) },
       });
       const values = await this.languages.applySettingTranslations(
         Object.fromEntries(settings.map((s) => [s.key, s.value])),

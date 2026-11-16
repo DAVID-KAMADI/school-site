@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthStore } from '../core/auth';
-import { errorMessage } from '../core/api-url.interceptor';
+import { errorMessage, isApiUnreachable } from '../core/api-url.interceptor';
 import { SiteStore } from '../core/site';
 import { Icon } from './icon';
 
@@ -217,7 +217,8 @@ export class AdminLogin {
       } else await this.continue();
     } catch (err) {
       // Opening the sign-in link lets this page be used for a few minutes; after that it needs the link again.
-      this.error.set((await this.auth.portalAccess()).granted ? errorMessage(err) : this.timedOutMessage());
+      // A server that is down is not a timed-out page: say so plainly.
+      this.error.set(isApiUnreachable(err) || (await this.auth.portalAccess()).granted ? errorMessage(err) : this.timedOutMessage());
     } finally {
       this.busy.set(false);
     }

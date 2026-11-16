@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { SiteSetting } from '../cms/entities/site-setting.entity.js';
 import { AccessController } from './access.controller.js';
 import { AccessService } from './access.service.js';
 import { AuthController } from './auth.controller.js';
@@ -32,6 +33,7 @@ import { UsersService } from './users.service.js';
       PortalAccessKey,
       PortalAccessKeyUser,
       PortalAccessLog,
+      SiteSetting,
     ]),
   ],
   controllers: [

@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 import { errorMessage } from '../../core/api-url.interceptor';
 import { AuthStore } from '../../core/auth';
 import { AdminApi, type AccessMatrix, type AccessReviewRow } from '../api';
+import { toastChannel } from '../toast';
 
 type Tab = 'roles' | 'review';
 type Role = AccessMatrix['roles'][number];
@@ -30,10 +31,6 @@ const ADMIN_ACCESS = 'admin.access';
       <button type="button" role="tab" class="chip" [class.chip--on]="tab() === 'roles'" [attr.aria-selected]="tab() === 'roles'" (click)="tab.set('roles')">Roles &amp; permissions</button>
       <button type="button" role="tab" class="chip" [class.chip--on]="tab() === 'review'" [attr.aria-selected]="tab() === 'review'" (click)="showReview()">Who has access</button>
     </div>
-
-    @if (message(); as m) {
-      <div class="a-alert" [class]="'a-alert--' + m.kind" role="status">{{ m.text }}</div>
-    }
 
     @if (tab() === 'roles') {
       @if (matrix(); as mx) {
@@ -124,7 +121,9 @@ const ADMIN_ACCESS = 'admin.access';
             </section>
           }
         </div>
-      } @else if (!message()) {
+      } @else if (loadError(); as e) {
+        <div class="a-alert a-alert--error">{{ e }}</div>
+      } @else {
         <p class="a-muted">Loading…</p>
       }
     }
@@ -224,7 +223,8 @@ export class AccessControl {
   protected readonly review = signal<AccessReviewRow[]>([]);
   protected readonly selectedKey = signal<string | null>(null);
   protected readonly draft = signal<Set<string>>(new Set());
-  protected readonly message = signal<{ kind: string; text: string } | null>(null);
+  protected readonly message = toastChannel();
+  protected readonly loadError = signal('');
   protected readonly saving = signal(false);
   protected readonly creating = signal(false);
   protected readonly renaming = signal(false);
@@ -289,7 +289,9 @@ export class AccessControl {
       const key = selectKey ?? this.selectedKey() ?? m.roles.find((r) => !r.locked)?.key ?? m.roles[0]?.key ?? null;
       this.selectedKey.set(key);
       this.resetDraft();
+      this.loadError.set('');
     } catch (err) {
+      if (!this.matrix()) this.loadError.set(errorMessage(err));
       this.message.set({ kind: 'error', text: errorMessage(err) });
     }
   }
