@@ -71,11 +71,6 @@ export type HeroMode = 'video' | 'slideshow';
         <button type="button" class="ctl" (click)="toggle()" [attr.aria-label]="(paused() ? 'Play ' : 'Pause ') + (mode() === 'video' ? 'video' : 'slideshow')">
           {{ paused() ? '▶' : '❚❚' }}
         </button>
-        @if (mode() === 'slideshow' && slides().length > 1) {
-          @for (s of slides(); track s.id; let i = $index) {
-            <button type="button" class="dot" [class.dot--active]="i === current()" (click)="go(i)" [attr.aria-label]="'Show photo ' + (i + 1)" [attr.aria-current]="i === current()"></button>
-          }
-        }
       </div>
     }
   `,
@@ -98,14 +93,15 @@ export type HeroMode = 'video' | 'slideshow';
     .switch button.on { background: #fff; color: var(--primary); }
     .switch button:not(.on):hover { background: rgb(255 255 255 / 0.2); }
     .ctl { width: 2.25rem; height: 2.25rem; border-radius: 50%; border: 1px solid rgb(255 255 255 / 0.6); background: rgb(0 26 92 / 0.35); color: #fff; font-size: 0.7rem; cursor: pointer; }
-    /* 24px tap area (WCAG 2.5.8) around a small visual dot. */
-    .dot { position: relative; width: 1.5rem; height: 1.5rem; padding: 0; border: 0; background: none; cursor: pointer; transition: width 0.3s ease; }
-    .dot::before { content: ''; position: absolute; left: 50%; top: 50%; translate: -50% -50%; width: 0.65rem; height: 0.65rem; border-radius: 999px; background: rgb(255 255 255 / 0.55); transition: width 0.3s ease, background 0.3s ease; }
-    .dot--active { width: 2.4rem; }
-    .dot--active::before { width: 1.9rem; background: var(--accent); }
-    .dot:hover::before { background: rgb(255 255 255 / 0.9); }
     .ctl:hover { background-color: rgb(255 255 255 / 0.85); }
     .ctl:hover { color: var(--primary); }
+    /* Phones: a more compact control bar so it doesn't crowd the hero buttons. */
+    @media (max-width: 640px) {
+      .controls { bottom: 0.75rem; gap: 0.3rem; }
+      .switch { padding: 2px; margin-right: 0; }
+      .switch button { min-height: 1.5rem; padding: 0 0.6rem; font-size: 0.7rem; }
+      .ctl { width: 1.75rem; height: 1.75rem; font-size: 0.6rem; }
+    }
   `,
 })
 export class HeroSlideshow implements OnDestroy {
