@@ -1,0 +1,316 @@
+/* Gallery page (/gallery). Uses the site's tokens from styles.scss. */
+
+.g-hero {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(60rem 30rem at 85% 10%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 60%),
+    linear-gradient(140deg, var(--primary-deep), var(--primary) 60%, var(--action));
+  padding-block: clamp(3rem, 7vw, 5.5rem) clamp(4rem, 8vw, 6.5rem);
+}
+/* A faint dot grid, like a contact sheet. */
+.g-hero__grain {
+  position: absolute;
+  inset: 0;
+  opacity: 0.18;
+  background-image: radial-gradient(rgb(255 255 255 / 0.55) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(90deg, transparent, #000 45%);
+}
+.g-hero__inner {
+  position: relative;
+  display: grid;
+  gap: clamp(2rem, 5vw, 4rem);
+  align-items: center;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+}
+.g-eyebrow {
+  margin-bottom: 0.7rem;
+  color: #ffb877;
+  font-size: 0.82rem;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.g-title {
+  margin-bottom: 0.9rem;
+  color: #fff;
+  font-size: clamp(2.6rem, 7vw, 5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.g-intro {
+  max-width: 44ch;
+  margin-bottom: 1.8rem;
+  color: rgb(255 255 255 / 0.86);
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+}
+.g-tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0;
+
+  div {
+    display: flex;
+    flex-direction: column-reverse;
+    min-width: 6.5rem;
+    padding: 0.7rem 1rem;
+    border: 1px solid rgb(255 255 255 / 0.2);
+    border-radius: var(--radius-sm);
+    background: rgb(255 255 255 / 0.07);
+    backdrop-filter: blur(4px);
+  }
+  dt {
+    color: rgb(255 255 255 / 0.75);
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  dd {
+    margin: 0;
+    color: #fff;
+    font-size: 1.7rem;
+    font-weight: 800;
+    line-height: 1.1;
+  }
+}
+
+/* The pile of printed photos. --pile goes from 1 (stacked, dropped in) to 0 (fanned out). */
+.g-pile {
+  position: relative;
+  width: min(100%, 26rem);
+  aspect-ratio: 1;
+  margin-inline: auto;
+}
+.g-pile__slot {
+  --pile: 0;
+  --spread: 1;
+  position: absolute;
+  inset: 18% 14%;
+  transform: translate(
+      calc(var(--x) * var(--spread) * (1 - var(--pile))),
+      calc(var(--y) * var(--spread) * (1 - var(--pile)) - var(--pile) * 60px)
+    )
+    rotate(calc(var(--r) * var(--spread) * (1 - var(--pile)))) scale(calc(1 + var(--pile) * 0.12));
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.g-pile:hover .g-pile__slot {
+  --spread: 1.25;
+}
+.g-pile__photo {
+  height: 100%;
+  overflow: hidden;
+  border: 7px solid #fff;
+  border-bottom-width: 26px;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 18px 40px -12px rgb(0 0 0 / 0.5);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-drag: none;
+
+  app-media-image {
+    height: 100%;
+  }
+  ::ng-deep img {
+    pointer-events: none;
+  }
+}
+
+.g-hero__curve {
+  position: absolute;
+  inset: auto 0 -2px;
+  width: 100%;
+  height: clamp(2.5rem, 6vw, 5rem);
+
+  path {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 3;
+    vector-effect: non-scaling-stroke;
+  }
+}
+
+.g-body {
+  padding-block: clamp(2.5rem, 6vw, 4.5rem) var(--section-space);
+}
+
+/* Category chips with a highlight that slides to the chosen one. */
+.g-filters {
+  position: relative;
+  display: flex;
+  gap: 0.35rem;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto clamp(2rem, 4vw, 3rem);
+  padding: 0.35rem;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-2);
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+.g-filters__pill {
+  position: absolute;
+  top: 0.35rem;
+  bottom: 0.35rem;
+  left: 0;
+  width: 0;
+  display: none;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--primary) 60%, transparent);
+}
+.g-filters--live .g-filters__pill {
+  display: block;
+}
+.g-chip {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex: none;
+  gap: 0.45rem;
+  align-items: center;
+  min-height: 2.6rem;
+  padding: 0 1.1rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: color 0.3s ease;
+
+  &:hover {
+    color: var(--action);
+  }
+}
+/* Without the sliding highlight (before scripts run), the chosen chip is filled in. */
+.g-chip--on {
+  background: var(--primary);
+  color: #fff;
+}
+.g-chip--on:hover {
+  color: #fff;
+}
+.g-filters--live .g-chip--on {
+  background: transparent;
+}
+.g-chip__count {
+  min-width: 1.5rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--surface-3);
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.5rem;
+  text-align: center;
+  transition:
+    background 0.3s ease,
+    color 0.3s ease;
+}
+.g-chip--on .g-chip__count {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.g-grid {
+  display: grid;
+  grid-auto-flow: dense;
+  gap: clamp(1.5rem, 3vw, 2.25rem) clamp(1rem, 2.5vw, 1.75rem);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.g-item--featured {
+  grid-column: span 2;
+  grid-row: span 2;
+}
+.g-item.is-hidden {
+  display: none;
+}
+
+.g-empty {
+  padding: 4rem 1rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  text-align: center;
+
+  h2 {
+    margin-bottom: 0.5rem;
+  }
+  p {
+    margin: 0;
+    color: var(--muted);
+  }
+}
+.g-empty__mark {
+  display: inline-grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: 1rem;
+  border-radius: 50%;
+  background: var(--surface-3);
+  color: var(--primary);
+
+  svg {
+    width: 1.6rem;
+    height: 1.6rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linejoin: round;
+  }
+}
+.g-notice {
+  padding: 1rem 1.2rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+@media (max-width: 1000px) {
+  .g-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 860px) {
+  .g-hero__inner {
+    grid-template-columns: 1fr;
+  }
+  .g-pile {
+    width: min(80%, 20rem);
+  }
+}
+@media (max-width: 600px) {
+  .g-grid {
+    grid-template-columns: 1fr;
+  }
+  .g-item--featured {
+    grid-column: auto;
+    grid-row: auto;
+  }
+  .g-filters {
+    width: auto;
+    margin-inline: calc(var(--gutter) * -0.25);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .g-pile__slot,
+  .g-chip,
+  .g-chip__count {
+    transition: none;
+  }
+}

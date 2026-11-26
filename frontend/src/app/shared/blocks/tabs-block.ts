@@ -36,7 +36,7 @@ let nextId = 0;
       font: inherit; font-weight: 600; white-space: nowrap; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease;
     }
     .tabs__tab:hover { background: var(--surface-3); color: var(--primary); }
-    .tabs__tab[aria-selected='true'] { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgb(0 38 128 / 0.25); }
+    .tabs__tab[aria-selected='true'] { background: var(--primary); color: #fff; box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-strong) 25%, transparent); }
     .tabs__panel {
       padding: clamp(1.25rem, 3vw, 2rem); background: var(--surface); border: 1px solid var(--line);
       border-top: 4px solid var(--action); border-radius: var(--radius); box-shadow: var(--shadow);

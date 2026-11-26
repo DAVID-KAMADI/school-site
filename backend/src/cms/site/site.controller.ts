@@ -156,6 +156,33 @@ export class SiteController {
     return this.site.adminSettings();
   }
 
+  /** Site colours: the four colours the website's palette is worked out from. */
+  @Get('theme')
+  @RequirePermissions('settings.edit')
+  theme() {
+    return this.site.theme();
+  }
+
+  @Put('theme')
+  @RequirePermissions('settings.edit')
+  async saveTheme(
+    @Body() body: unknown,
+    @CurrentUser() user: AuthUser,
+    @Req() req: Request,
+  ) {
+    const before = await this.site.theme();
+    const saved = await this.site.saveTheme(body, user.id);
+    await this.audit.record({
+      action: 'settings.theme',
+      userId: user.id,
+      entityType: 'setting',
+      entityId: 'theme.colors',
+      details: { before, after: saved },
+      ipAddress: req.ip,
+    });
+    return saved;
+  }
+
   @Put('settings/:key')
   @RequirePermissions('settings.edit')
   async saveSetting(

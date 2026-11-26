@@ -13,10 +13,10 @@
  */
 
 /** Same list as APP_ROUTES in core/site.ts: pages that never get a language prefix. */
-export const APP_ROUTES = /^\/(admin|api|media|apply|preview|portal|login|assets|timetable|blog)(\/|$|[?#])/;
+export const APP_ROUTES = /^\/(admin|api|media|apply|preview|portal|login|assets|timetable|blog|gallery|staff|downloads)(\/|$|[?#])/;
 
 /** Pages that are personal or private: always rendered fresh. */
-const NEVER_CACHED = /^\/(admin|portal|login|preview|apply\/application)(\/|$)/;
+const NEVER_CACHED = /^\/(admin|portal|login|preview|apply\/application|apply\/reset-password)(\/|$)/;
 
 export interface RenderedPage {
   status: number;

@@ -13,8 +13,8 @@ let animeLoad: Promise<Anime> | null = null;
 export const loadAnime = () => (animeLoad ??= import('./anime'));
 
 /** True while the welcome screen still covers the page. It fires "splash-leave" on window as it lifts. */
-const splashCovering = () => !!document.querySelector('.splash:not(.splash--leaving)');
-const splashLeaves = () => new Promise<void>((done) => window.addEventListener('splash-leave', () => done(), { once: true }));
+export const splashCovering = () => !!document.querySelector('.splash:not(.splash--leaving)');
+export const splashLeaves = () => new Promise<void>((done) => window.addEventListener('splash-leave', () => done(), { once: true }));
 
 /** Movement is on unless the visitor asked their device for less, or the admin switched it off. */
 export const motionAllowed = (site: SiteStore) => !reducedMotion() && site.setting<{ enabled?: boolean }>('banner.animations')?.enabled !== false;

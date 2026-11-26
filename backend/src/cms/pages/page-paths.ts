@@ -8,6 +8,9 @@ export const RESERVED_TOP_LEVEL_SLUGS = new Set([
   'login',
   'apply',
   'timetable',
+  'gallery',
+  'staff',
+  'downloads',
   'search',
   'assets',
 ]);

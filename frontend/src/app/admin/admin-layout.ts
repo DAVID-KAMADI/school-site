@@ -28,6 +28,9 @@ const NAV: { heading: string; items: NavItem[] }[] = [
     items: [
       { label: 'Pages', path: '/admin/pages', permission: CONTENT_PERMISSIONS, icon: 'pages' },
       { label: 'Blog', path: '/admin/blog', permission: CONTENT_PERMISSIONS, icon: 'pages' },
+      { label: 'Gallery', path: '/admin/gallery', permission: CONTENT_PERMISSIONS, icon: 'image' },
+      { label: 'Staff hierarchy', path: '/admin/staff', permission: CONTENT_PERMISSIONS, icon: 'sitemap' },
+      { label: 'Downloads', path: '/admin/downloads', permission: CONTENT_PERMISSIONS, icon: 'download' },
       { label: 'Media library', path: '/admin/media', permission: [...CONTENT_PERMISSIONS, 'media.upload', 'media.edit', 'media.delete'], icon: 'media' },
       { label: 'Menus', path: '/admin/menus', permission: 'menus.edit', icon: 'menu' },
     ],
@@ -50,6 +53,7 @@ const NAV: { heading: string; items: NavItem[] }[] = [
     heading: 'Site',
     items: [
       { label: 'Site settings', path: '/admin/settings', permission: 'settings.edit', icon: 'sliders' },
+      { label: 'Site colours', path: '/admin/colours', permission: 'settings.edit', icon: 'palette' },
       { label: 'Languages', path: '/admin/languages', permission: 'settings.edit', icon: 'globe' },
       { label: 'Interface text', path: '/admin/text', permission: 'text_strings.edit', icon: 'text' },
       { label: 'Redirects', path: '/admin/redirects', permission: 'redirects.edit', icon: 'redirect' },

@@ -88,11 +88,11 @@ export type HeroMode = 'video' | 'slideshow';
     .bg-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.9s ease; pointer-events: none; }
     .bg-video--on { opacity: 1; }
     .controls { position: absolute; z-index: 3; right: var(--gutter); bottom: 1.5rem; display: flex; gap: 0.5rem; align-items: center; }
-    .switch { display: flex; padding: 3px; border-radius: 999px; border: 1px solid rgb(255 255 255 / 0.6); background: rgb(0 26 92 / 0.35); backdrop-filter: blur(6px); margin-right: 0.25rem; }
+    .switch { display: flex; padding: 3px; border-radius: 999px; border: 1px solid rgb(255 255 255 / 0.6); background: color-mix(in srgb, var(--primary-deep) 35%, transparent); backdrop-filter: blur(6px); margin-right: 0.25rem; }
     .switch button { min-height: 1.9rem; padding: 0 0.85rem; border: 0; border-radius: 999px; background: none; color: #fff; font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: background 0.25s ease, color 0.25s ease; }
     .switch button.on { background: #fff; color: var(--primary); }
     .switch button:not(.on):hover { background: rgb(255 255 255 / 0.2); }
-    .ctl { width: 2.25rem; height: 2.25rem; border-radius: 50%; border: 1px solid rgb(255 255 255 / 0.6); background: rgb(0 26 92 / 0.35); color: #fff; font-size: 0.7rem; cursor: pointer; }
+    .ctl { width: 2.25rem; height: 2.25rem; border-radius: 50%; border: 1px solid rgb(255 255 255 / 0.6); background: color-mix(in srgb, var(--primary-deep) 35%, transparent); color: #fff; font-size: 0.7rem; cursor: pointer; }
     .ctl:hover { background-color: rgb(255 255 255 / 0.85); }
     .ctl:hover { color: var(--primary); }
     /* Phones: a more compact control bar so it doesn't crowd the hero buttons. */

@@ -104,7 +104,7 @@ const STAGES: { key: FollowUpStage; label: string; help: string }[] = [
                 <td class="nowrap">{{ m.at | date: 'd MMM, HH:mm' }}</td>
                 <td>
                   {{ m.recipientName ?? m.recipient }}
-                  <div class="a-small a-muted">{{ m.channel === 'sms' ? 'SMS' : 'Email' }} · {{ m.recipient }}{{ m.purpose === 'test' ? ' · test' : '' }}</div>
+                  <div class="a-small a-muted">{{ m.channel === 'sms' ? 'SMS' : 'Email' }} · {{ m.recipient }}{{ m.purpose === 'test' ? ' · test' : m.purpose === 'password_reset' ? ' · password reset link' : '' }}</div>
                 </td>
                 <td class="msg">
                   @if (m.subject) {<strong>{{ m.subject }}</strong><br />}

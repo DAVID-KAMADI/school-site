@@ -11,8 +11,8 @@ import { Application } from '../admissions/entities/application.entity.js';
 import { User } from '../identity/entities/user.entity.js';
 
 export type MessageChannel = 'sms' | 'email';
-/** follow_up: to an applicant from Admissions → Follow-ups; test: from SMS & email settings. */
-export type MessagePurpose = 'follow_up' | 'test';
+/** follow_up: to an applicant from Admissions → Follow-ups; test: from SMS & email settings; password_reset: a "forgot your password" link. */
+export type MessagePurpose = 'follow_up' | 'test' | 'password_reset';
 
 /** Every SMS and email the site sends, with what the provider answered. */
 @Entity('message_log')

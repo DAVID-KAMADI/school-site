@@ -24,6 +24,10 @@ import { AdminLayout } from './admin-layout';
 import { Dashboard } from './dashboard/dashboard';
 import { BlogEditor, blogUnsavedChangesGuard } from './blog/blog-editor';
 import { BlogList } from './blog/blog-list';
+import { AlbumEditor, albumUnsavedChangesGuard } from './gallery/album-editor';
+import { GalleryList } from './gallery/gallery-list';
+import { StaffAdmin } from './staff/staff-admin';
+import { DownloadsAdmin } from './downloads/downloads-admin';
 import { AdminRoot } from './admin-root';
 import { AdminLogin } from './login';
 import { MediaLibrary } from './media/media-library';
@@ -36,6 +40,7 @@ import { RedirectsEditor } from './site/redirects-editor';
 import { PopupsEditor } from './site/popups-editor';
 import { SettingsEditor } from './site/settings-editor';
 import { MaintenanceModeEditor } from './site/maintenance-mode';
+import { SiteColours } from './site/site-colours';
 import { TextEditor } from './site/text-editor';
 import { TermWorkspace } from './timetable/term-workspace';
 import { TimetableHome } from './timetable/timetable-home';
@@ -70,6 +75,10 @@ export const adminRoutes: Routes = [
           { path: 'pages/:id', component: PageEditor, canDeactivate: [unsavedChangesGuard], ...only(...CONTENT_PERMISSIONS) },
           { path: 'blog', component: BlogList, ...only(...CONTENT_PERMISSIONS) },
           { path: 'blog/:id', component: BlogEditor, canDeactivate: [blogUnsavedChangesGuard], ...only(...CONTENT_PERMISSIONS) },
+          { path: 'gallery', component: GalleryList, ...only(...CONTENT_PERMISSIONS) },
+          { path: 'gallery/:id', component: AlbumEditor, canDeactivate: [albumUnsavedChangesGuard], ...only(...CONTENT_PERMISSIONS) },
+          { path: 'staff', component: StaffAdmin, ...only(...CONTENT_PERMISSIONS) },
+          { path: 'downloads', component: DownloadsAdmin, ...only(...CONTENT_PERMISSIONS) },
           { path: 'applications', component: ApplicationsList, ...only('applications.view') },
           { path: 'applications/:id', component: ApplicationDetail, ...only('applications.view') },
           { path: 'applicants', component: ApplicantsList, ...only('applicants.manage') },
@@ -80,6 +89,7 @@ export const adminRoutes: Routes = [
           { path: 'media', component: MediaLibrary, ...only(...CONTENT_PERMISSIONS, 'media.upload', 'media.edit', 'media.delete') },
           { path: 'menus', component: MenusEditor, ...only('menus.edit') },
           { path: 'settings', component: SettingsEditor, ...only('settings.edit') },
+          { path: 'colours', component: SiteColours, ...only('settings.edit') },
           { path: 'languages', component: LanguagesEditor, ...only('settings.edit') },
           { path: 'text', component: TextEditor, ...only('text_strings.edit') },
           { path: 'popups', component: PopupsEditor, ...only('settings.edit') },

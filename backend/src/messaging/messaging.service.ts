@@ -45,6 +45,8 @@ export interface SendMeta {
   sentById: number | null;
   recipientUserId?: number | null;
   applicationId?: number | null;
+  /** What to keep in the message log instead of the text sent (e.g. with a reset link removed). */
+  loggedText?: string;
 }
 
 /** SMS and email: the provider settings, sending, and the message log. */
@@ -186,7 +188,7 @@ export class MessagingService {
     if (!emailReady(settings)) result = fail('Email is not set up yet: add the mail server details under SMS & email.');
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) result = fail(`"${to}" is not an email address.`);
     else result = await sendEmail(settings, to, subject, text);
-    await this.record('email', to, subject, text, result, meta);
+    await this.record('email', to, subject, meta.loggedText ?? text, result, meta);
     return { ...result, recipient: to };
   }
 

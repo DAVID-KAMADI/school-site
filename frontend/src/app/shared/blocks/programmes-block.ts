@@ -107,7 +107,7 @@ let nextId = 0;
       transition: background-color 0.2s ease, color 0.2s ease;
     }
     .pt__tab:hover { background: var(--surface-3); color: var(--primary); }
-    .pt__tab[aria-selected='true'] { background: var(--primary); color: #fff; box-shadow: 0 2px 8px rgb(0 38 128 / 0.25); }
+    .pt__tab[aria-selected='true'] { background: var(--primary); color: #fff; box-shadow: 0 2px 8px color-mix(in srgb, var(--primary-strong) 25%, transparent); }
     .pt__count {
       min-width: 1.5rem; padding: 0.05rem 0.45rem; border-radius: 999px; font-size: 0.78rem; text-align: center;
       background: var(--surface); color: var(--primary);

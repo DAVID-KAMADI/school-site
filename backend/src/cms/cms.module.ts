@@ -73,6 +73,12 @@ import { SiteService } from './site/site.service.js';
     PublicService,
     PopupsService,
   ],
-  exports: [TypeOrmModule, MediaService, PagesService, ContentCacheService],
+  exports: [
+    TypeOrmModule,
+    MediaService,
+    PagesService,
+    ContentCacheService,
+    LanguagesService,
+  ],
 })
 export class CmsModule {}

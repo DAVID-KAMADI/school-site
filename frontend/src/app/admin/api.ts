@@ -4,6 +4,8 @@ import { firstValueFrom } from 'rxjs';
 import type { BlogPost, BlogPostSummary } from '../core/blog';
 import type { MediaMap, MediaView } from '../core/models';
 
+import type { ThemeColors } from '../core/theme';
+
 export type PopupKind = 'announcement' | 'event' | 'offer' | 'course' | 'news';
 
 /** A website pop-up from Admin → Pop-ups. */
@@ -25,6 +27,108 @@ export interface PopupRow {
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
+}
+
+/** The heading and introduction at the top of the Gallery or Our people page. */
+export interface PageIntroEdit {
+  eyebrow: string;
+  title: string;
+  intro: string;
+}
+
+/** A category in Admin → Downloads (Tenders, Job vacancies…). */
+export interface DownloadCategoryRow {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  sortOrder: number;
+}
+
+/** What Admin → Downloads sends when a document is saved. */
+export interface DownloadEdit {
+  categoryId: number;
+  title: string;
+  reference: string;
+  summary: string;
+  mediaId: number | null;
+  publishedOn: string;
+  /** ISO time, or '' for no deadline. */
+  closesAt: string;
+  isPublished: boolean;
+  isPinned: boolean;
+}
+
+/** A document in Admin → Downloads. */
+export interface DownloadRow {
+  id: number;
+  categoryId: number;
+  title: string;
+  reference: string | null;
+  summary: string | null;
+  mediaId: number;
+  publishedOn: string;
+  closesAt: string | null;
+  isClosed: boolean;
+  isPublished: boolean;
+  isPinned: boolean;
+  file: MediaView | null;
+  updatedAt: string;
+}
+
+/** A row in Admin → Gallery. */
+export interface AlbumRow {
+  id: number;
+  slug: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  takenOn: string | null;
+  isFeatured: boolean;
+  isPublished: boolean;
+  sortOrder: number;
+  photoCount: number;
+  coverImageId: number | null;
+  cover: MediaView | null;
+  preview: MediaView[];
+  updatedAt: string;
+}
+
+export interface AlbumDetail {
+  id: number;
+  slug: string;
+  title: string;
+  description: string | null;
+  category: string | null;
+  coverImageId: number | null;
+  takenOn: string | null;
+  isPublished: boolean;
+  isFeatured: boolean;
+  sortOrder: number;
+  photos: { mediaId: number; caption: string | null; media: MediaView | null }[];
+  cover: MediaView | null;
+}
+
+export interface StaffLevelRow {
+  id: number;
+  name: string;
+  description: string | null;
+  sortOrder: number;
+}
+
+export interface StaffMemberRow {
+  id: number;
+  levelId: number;
+  name: string;
+  position: string;
+  department: string | null;
+  photoId: number | null;
+  photo: MediaView | null;
+  bio: string | null;
+  email: string | null;
+  phone: string | null;
+  isPublished: boolean;
+  sortOrder: number;
 }
 
 export interface PageSummary {
@@ -261,6 +365,34 @@ export class AdminApi {
   savePopup = (id: number | null, body: unknown) => (id ? this.put<PopupRow>(`/popups/${id}`, body) : this.post<PopupRow>('/popups', body));
   deletePopup = (id: number) => this.delete(`/popups/${id}`);
 
+  // Gallery (photo albums) and the staff hierarchy
+  galleryAlbums = () => this.get<{ page: PageIntroEdit; albums: AlbumRow[] }>('/gallery/albums');
+  galleryAlbum = (id: number) => this.get<AlbumDetail>(`/gallery/albums/${id}`);
+  saveGalleryAlbum = (id: number | null, body: unknown) =>
+    id ? this.put<AlbumDetail>(`/gallery/albums/${id}`, body) : this.post<AlbumDetail>('/gallery/albums', body);
+  deleteGalleryAlbum = (id: number) => this.delete(`/gallery/albums/${id}`);
+  saveGalleryPage = (body: PageIntroEdit) => this.put<PageIntroEdit>('/gallery/page', body);
+  staff = () => this.get<{ page: PageIntroEdit; levels: StaffLevelRow[]; members: StaffMemberRow[] }>('/staff');
+  saveStaffLevel = (id: number | null, body: unknown) =>
+    id ? this.put<StaffLevelRow>(`/staff/levels/${id}`, body) : this.post<StaffLevelRow>('/staff/levels', body);
+  deleteStaffLevel = (id: number) => this.delete(`/staff/levels/${id}`);
+  orderStaffLevels = (ids: number[]) => this.put('/staff/levels/order', { ids });
+  saveStaffMember = (id: number | null, body: unknown) =>
+    id ? this.put<StaffMemberRow>(`/staff/members/${id}`, body) : this.post<StaffMemberRow>('/staff/members', body);
+  deleteStaffMember = (id: number) => this.delete(`/staff/members/${id}`);
+  orderStaffMembers = (ids: number[]) => this.put('/staff/members/order', { ids });
+  saveStaffPage = (body: PageIntroEdit) => this.put<PageIntroEdit>('/staff/page', body);
+  // Downloads: tenders, job vacancies, forms and other documents
+  downloads = () => this.get<{ page: PageIntroEdit; categories: DownloadCategoryRow[]; items: DownloadRow[] }>('/downloads');
+  saveDownload = (id: number | null, body: DownloadEdit) =>
+    id ? this.put<DownloadRow>(`/downloads/${id}`, body) : this.post<DownloadRow>('/downloads', body);
+  deleteDownload = (id: number) => this.delete(`/downloads/${id}`);
+  saveDownloadCategory = (id: number | null, body: { name: string; slug: string; description: string }) =>
+    id ? this.put<DownloadCategoryRow>(`/downloads/categories/${id}`, body) : this.post<DownloadCategoryRow>('/downloads/categories', body);
+  deleteDownloadCategory = (id: number) => this.delete(`/downloads/categories/${id}`);
+  orderDownloadCategories = (ids: number[]) => this.put('/downloads/categories/order', { ids });
+  saveDownloadsPage = (body: PageIntroEdit) => this.put<PageIntroEdit>('/downloads/page', body);
+
   // Users
   users = () => this.get<UserRow[]>('/users');
   roles = () => this.get<{ key: string; name: string; description: string | null; permissions: string[] }[]>('/users/roles');
@@ -291,6 +423,10 @@ export class AdminApi {
     this.post<{ key: string; record: PortalKey }>('/portal-access-keys', body);
   portalLinkSettings = () => this.get<{ required: boolean }>('/portal-access-keys/settings');
   setPortalLinkRequired = (required: boolean) => this.put<{ required: boolean }>('/portal-access-keys/settings', { required });
+  // Site colours (the four colours the public website is drawn with)
+  theme = () => this.get<ThemeColors>('/theme');
+  saveTheme = (colors: ThemeColors) => this.put<ThemeColors>('/theme', colors);
+
   // Maintenance mode
   maintenance = () => this.get<MaintenanceMode & { active: boolean; restoring: boolean }>('/maintenance');
   saveMaintenance = (body: { enabled: boolean; title: string; message: string; endsAt: string | null; autoEnd: boolean }) =>
@@ -394,7 +530,7 @@ export interface MessageLogRow {
   id: number;
   at: string;
   channel: 'sms' | 'email';
-  purpose: 'follow_up' | 'test';
+  purpose: 'follow_up' | 'test' | 'password_reset';
   recipient: string;
   recipientName: string | null;
   applicationId: number | null;

@@ -132,7 +132,7 @@ interface Unit {
     .mt__unit { display: grid; gap: 0.4rem; justify-items: center; }
     .mt__digits {
       display: flex; gap: 0.15rem; padding: 0.55rem 0.7rem; border-radius: var(--radius);
-      background: var(--primary); color: #fff; box-shadow: 0 0.5rem 1.2rem rgb(0 26 92 / 0.22);
+      background: var(--primary); color: #fff; box-shadow: 0 0.5rem 1.2rem color-mix(in srgb, var(--primary-deep) 22%, transparent);
       overflow: hidden;
     }
     .mt__digit {

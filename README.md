@@ -207,6 +207,7 @@ The API will not start with `NODE_ENV=production` while any of these are unsafe.
 - `TRUST_PROXY=1`
 - `WEBSITE_SERVER_SECRET`: the same value as in the API settings (the website server will not start in production without it)
 - `NG_ALLOWED_HOSTS=<real domain>,www.<real domain>`
+- `SITE_URL=https://<real domain>`: the address used in `/robots.txt` and `/sitemap.xml`. Without it they use whatever address the visitor typed (fine for testing, but search engines should see one address).
 - `WEB_WORKERS=auto`: one page-rendering process per CPU core, minus one for the API. One process uses only one core and slows down past about 50 visitors at once. Leave it unset when running under PM2 cluster mode, which does the same. Each process needs about 300 MB of memory.
 - `WEB_PAGE_CACHE_SECONDS` (optional, default 30 in production): how long a rendered public page is reused before it is rendered again. Published changes therefore show on the site within this time. Private pages (admin, the applicant's own pages, sign-in, previews) are never cached, and each visitor still gets their own security nonce. `0` turns it off. In load tests it raised the number of visitors the site could serve from about 200 to over 500 at once.
 
@@ -214,6 +215,7 @@ The API will not start with `NODE_ENV=production` while any of these are unsafe.
 
 - HTTPS certificate on the domain.
 - Only ports 80 and 443 open to the internet. The database is not reachable from outside.
+- After launch, add the site to Google Search Console and submit `https://<real domain>/sitemap.xml`. The sitemap lists published public pages (with their translations), blog posts, photo albums and download categories, and updates itself within about 15 minutes of publishing. `/robots.txt` keeps the staff portal, applicant accounts, previews and the API out of search results.
 - Nightly `npm run backup` with copies off the server, and a monthly `npm run backup:check`.
 - Run `npm run migration:run` on every deploy, and `npm run seed:legal` once. Never load the demo seed (`seed:demo`) on production.
 - Legal pages completed (no `[brackets]` left) and reviewed by an advocate. Institution registered with the ODPC.

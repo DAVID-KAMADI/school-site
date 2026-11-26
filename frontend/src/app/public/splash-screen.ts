@@ -115,7 +115,7 @@ const reducedMotion = () => typeof matchMedia !== 'undefined' && matchMedia('(pr
     .ln--clock { stroke: var(--accent); animation-delay: 1.15s; animation-duration: 0.3s; }
     .ln--pole { animation-delay: 1.2s; animation-duration: 0.3s; }
     .flag { fill: var(--accent); opacity: 0; transform-origin: 120px 13px; animation: wave 0.5s ease 1.45s forwards; }
-    .win { fill: var(--accent); opacity: 0; animation: light 0.3s ease forwards; filter: drop-shadow(0 0 4px rgb(239 109 0 / 0.6)); }
+    .win { fill: var(--accent); opacity: 0; animation: light 0.3s ease forwards; filter: drop-shadow(0 0 4px color-mix(in srgb, var(--accent) 60%, transparent)); }
     .win--1 { animation-delay: 1.3s; }
     .win--4 { animation-delay: 1.38s; }
     .win--2 { animation-delay: 1.46s; }

@@ -8,12 +8,16 @@ import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AccountRecoveryModule } from './account-recovery/account-recovery.module.js';
 import { AdmissionsModule } from './admissions/admissions.module.js';
 import { AuditModule } from './audit/audit.module.js';
 import { BackupModule } from './backup/backup.module.js';
 import { MaintenanceModule } from './maintenance/maintenance.module.js';
 import { MessagingModule } from './messaging/messaging.module.js';
 import { BlogModule } from './blog/blog.module.js';
+import { DownloadsModule } from './downloads/downloads.module.js';
+import { GalleryModule } from './gallery/gallery.module.js';
+import { StaffModule } from './staff/staff.module.js';
 import { CmsModule } from './cms/cms.module.js';
 import { DashboardModule } from './dashboard/dashboard.controller.js';
 import { databaseOptions } from './config/database.config.js';
@@ -24,6 +28,7 @@ import { PermissionsGuard, SessionGuard } from './identity/guards.js';
 import { UserThrottleGuard } from './identity/user-throttle.js';
 import { IdentityModule } from './identity/identity.module.js';
 import { TimetableModule } from './timetable/timetable.module.js';
+import { SitemapModule } from './sitemap/sitemap.module.js';
 
 @Module({
   imports: [
@@ -38,12 +43,17 @@ import { TimetableModule } from './timetable/timetable.module.js';
     IdentityModule,
     CmsModule,
     BlogModule,
+    GalleryModule,
+    DownloadsModule,
+    StaffModule,
     AdmissionsModule,
     DashboardModule,
     TimetableModule,
     BackupModule,
     MaintenanceModule,
     MessagingModule,
+    AccountRecoveryModule,
+    SitemapModule,
   ],
   controllers: [HealthController],
   providers: [

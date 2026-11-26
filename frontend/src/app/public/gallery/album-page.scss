@@ -1,0 +1,330 @@
+/* One album (/gallery/<slug>). Uses the site's tokens from styles.scss. */
+
+.a-head {
+  position: relative;
+  overflow: hidden;
+  padding-block: clamp(2rem, 5vw, 3.5rem) clamp(2rem, 5vw, 3rem);
+  background:
+    radial-gradient(40rem 18rem at 100% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 65%),
+    var(--surface-2);
+  border-bottom: 1px solid var(--line);
+}
+.a-back {
+  display: inline-flex;
+  gap: 0.45rem;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  font-weight: 650;
+  text-decoration: none;
+
+  span {
+    transition: translate 0.25s ease;
+  }
+  &:hover span {
+    translate: -4px 0;
+  }
+}
+.a-eyebrow {
+  margin-bottom: 0.5rem;
+  color: var(--accent-text);
+  font-size: 0.82rem;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.a-title {
+  max-width: 22ch;
+  margin-bottom: 0.5rem;
+}
+.a-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+  color: var(--muted);
+  font-weight: 550;
+}
+.a-desc {
+  max-width: 62ch;
+  color: var(--text);
+  font-size: 1.1rem;
+}
+.a-play {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.5rem;
+
+  svg {
+    width: 1.1rem;
+    height: 1.1rem;
+    fill: currentColor;
+  }
+}
+
+/* Masonry wall: photos keep their own shape. */
+.a-wall-wrap {
+  padding-block: clamp(2rem, 5vw, 3.5rem) var(--section-space);
+}
+.a-wall {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  columns: 4 14rem;
+  column-gap: 0.9rem;
+
+  li {
+    margin-bottom: 0.9rem;
+    break-inside: avoid;
+  }
+}
+.a-thumb {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  cursor: zoom-in;
+
+  app-media-image {
+    height: 100%;
+    transition:
+      scale 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      filter 0.4s ease;
+  }
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 0 var(--accent);
+    transition: box-shadow 0.3s ease;
+  }
+  &:hover app-media-image,
+  &:focus-visible app-media-image {
+    scale: 1.05;
+    filter: saturate(1.1);
+  }
+  &:hover::after,
+  &:focus-visible::after {
+    box-shadow: inset 0 0 0 4px var(--accent);
+  }
+}
+
+.a-more {
+  padding-block: var(--section-space);
+  background: var(--surface-2);
+  border-top: 1px solid var(--line);
+}
+.a-more__title {
+  margin-bottom: 2rem;
+}
+.a-more__grid {
+  display: grid;
+  gap: 1.75rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.a-missing {
+  padding-block: var(--section-space);
+  text-align: center;
+
+  p {
+    color: var(--muted);
+  }
+}
+
+/* ---------- Full-screen viewer ---------- */
+.viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  background: rgb(4 10 30 / 0.96);
+  color: #fff;
+  animation: viewer-in 0.3s ease both;
+
+  &:focus {
+    outline: none;
+  }
+}
+@keyframes viewer-in {
+  from {
+    background-color: rgb(4 10 30 / 0);
+  }
+}
+.viewer__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem clamp(0.75rem, 3vw, 1.5rem);
+}
+.viewer__count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+}
+.viewer__tools {
+  display: flex;
+  gap: 0.5rem;
+}
+.viewer__progress {
+  display: block;
+  height: 3px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+.viewer__btn {
+  display: grid;
+  place-items: center;
+  width: 2.9rem;
+  height: 2.9rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    scale 0.2s ease;
+
+  svg {
+    width: 1.35rem;
+    height: 1.35rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  &:hover,
+  &:focus-visible {
+    background: rgb(255 255 255 / 0.22);
+  }
+  &:active {
+    scale: 0.92;
+  }
+}
+.viewer__btn svg.solid {
+  fill: currentColor;
+  stroke: none;
+}
+.viewer__stage {
+  position: relative;
+  display: grid;
+  min-height: 0;
+  padding: 0.5rem clamp(0.5rem, 5vw, 5rem);
+  place-items: center;
+
+  figure {
+    display: grid;
+    gap: 0.75rem;
+    max-width: min(1300px, 100%);
+    max-height: 100%;
+    min-height: 0;
+    margin: 0;
+    justify-items: center;
+    touch-action: pan-y;
+  }
+}
+.viewer__photo {
+  max-height: calc(100vh - 13rem);
+  max-height: calc(100dvh - 13rem);
+}
+.viewer__photo ::ng-deep img {
+  max-height: calc(100vh - 13rem);
+  max-height: calc(100dvh - 13rem);
+  object-fit: contain;
+  border-radius: 4px;
+}
+figcaption {
+  max-width: 60ch;
+  color: rgb(255 255 255 / 0.85);
+  text-align: center;
+}
+.viewer__nav {
+  position: absolute;
+  top: 50%;
+  translate: 0 -50%;
+}
+.viewer__nav--prev {
+  left: clamp(0.5rem, 2vw, 1.5rem);
+}
+.viewer__nav--next {
+  right: clamp(0.5rem, 2vw, 1.5rem);
+}
+.viewer__strip {
+  display: flex;
+  gap: 0.45rem;
+  padding: 0.75rem clamp(0.75rem, 3vw, 1.5rem) 1rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 0.3) transparent;
+}
+.viewer__mini {
+  flex: none;
+  width: 4.5rem;
+  height: 3.2rem;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.08);
+  opacity: 0.5;
+  cursor: pointer;
+  transition:
+    opacity 0.25s ease,
+    border-color 0.25s ease,
+    translate 0.25s ease;
+
+  &:hover,
+  &:focus-visible {
+    opacity: 0.85;
+  }
+}
+.viewer__mini--on {
+  border-color: var(--accent);
+  opacity: 1;
+  translate: 0 -3px;
+}
+
+@media (max-width: 900px) {
+  .a-more__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .a-wall {
+    columns: 2;
+    column-gap: 0.5rem;
+    li {
+      margin-bottom: 0.5rem;
+    }
+  }
+  .a-more__grid {
+    grid-template-columns: 1fr;
+  }
+  .viewer__nav {
+    display: none;
+  }
+  .viewer__stage {
+    padding-inline: 0.25rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .a-thumb app-media-image,
+  .a-thumb::after,
+  .viewer__mini,
+  .viewer__btn {
+    transition: none;
+  }
+}

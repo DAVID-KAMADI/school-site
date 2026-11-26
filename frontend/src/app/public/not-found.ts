@@ -127,9 +127,9 @@ const SPARKS: [number, number, number][] = [
     .nf__digit {
       font-size: clamp(6rem, 24vw, 11.5rem); font-weight: 800; line-height: 1; letter-spacing: -0.04em;
       color: var(--primary);
-      text-shadow: 0 0.06em 0 var(--primary-deep), 0 0.14em 0.3em rgb(0 26 92 / 0.18);
+      text-shadow: 0 0.06em 0 var(--primary-deep), 0 0.14em 0.3em color-mix(in srgb, var(--primary-deep) 18%, transparent);
     }
-    .nf__zero svg { display: block; height: clamp(6.2rem, 25vw, 12rem); width: auto; overflow: visible; filter: drop-shadow(0 0.6rem 1rem rgb(0 26 92 / 0.18)); }
+    .nf__zero svg { display: block; height: clamp(6.2rem, 25vw, 12rem); width: auto; overflow: visible; filter: drop-shadow(0 0.6rem 1rem color-mix(in srgb, var(--primary-deep) 18%, transparent)); }
     .nf__ring { fill: #fff; stroke: var(--primary); stroke-width: 13; }
     .nf__ring-inner { fill: none; stroke: var(--primary); stroke-opacity: 0.15; stroke-width: 1.5; }
     .nf__ticks path { stroke: var(--primary); stroke-opacity: 0.45; stroke-width: 2.5; stroke-linecap: round; }

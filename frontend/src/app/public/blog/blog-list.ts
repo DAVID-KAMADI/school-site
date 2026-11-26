@@ -59,7 +59,7 @@ import type { BlogListResult } from './blog-resolvers';
     .lead { margin: 0; color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.25rem); }
     .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.5rem; }
     .card { overflow: hidden; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); transition: transform 0.18s ease, box-shadow 0.18s ease; }
-    .card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px rgb(0 26 92 / 0.11); }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 12px 28px color-mix(in srgb, var(--primary-deep) 11%, transparent); }
     .card__image { display: block; overflow: hidden; height: 13rem; background: linear-gradient(135deg, var(--primary), var(--action)); }
     .card__image ::ng-deep img { transition: transform 0.25s ease; }
     .card:hover .card__image ::ng-deep img { transform: scale(1.035); }

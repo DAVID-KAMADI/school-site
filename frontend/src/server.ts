@@ -15,6 +15,7 @@ import { availableParallelism } from 'node:os';
 import { join } from 'node:path';
 import { VISITOR_IP_HEADER, WEBSITE_KEY_HEADER } from './app/core/api-url.interceptor';
 import { APP_ROUTES, cacheKey, PageCache, pageCacheSeconds, withNonce, type RenderedPage } from './page-cache';
+import { robotsTxt, siteBaseUrl, sitemapXml, type SitemapEntry } from './seo-files';
 
 /**
  * Production web server: serves the built site, renders public pages on the server,
@@ -150,6 +151,38 @@ app.use(
     redirect: false,
   }),
 );
+
+/**
+ * Search engines: /robots.txt and /sitemap.xml. Addresses use SITE_URL (the live https:// address)
+ * when set, otherwise the address the visitor used. The sitemap is rebuilt at most every 10 minutes.
+ */
+const sitemapCache = new Map<string, { xml: string; at: number }>();
+const baseUrlFor = (req: Request) => siteBaseUrl(process.env['SITE_URL'], req.protocol, req.get('host'));
+
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').setHeader('Cache-Control', 'public, max-age=3600');
+  res.send(robotsTxt(baseUrlFor(req)));
+});
+
+app.get('/sitemap.xml', async (req, res) => {
+  const base = baseUrlFor(req);
+  let cached = sitemapCache.get(base);
+  if (!cached || Date.now() - cached.at > 10 * 60_000) {
+    try {
+      const response = await apiCall(req, '/api/v1/public/sitemap');
+      if (!response.ok) throw new Error(`API answered ${response.status}`);
+      const { entries } = (await response.json()) as { entries: SitemapEntry[] };
+      cached = { xml: sitemapXml(base, entries), at: Date.now() };
+      if (sitemapCache.size >= 10) sitemapCache.clear(); // a few addresses at most (domain, www, IP)
+      sitemapCache.set(base, cached);
+    } catch (err) {
+      console.error('Sitemap: could not load addresses from the API.', err);
+      if (!cached) return void res.status(503).setHeader('Retry-After', '300').type('text/plain').send('Sitemap unavailable, try again shortly.');
+    }
+  }
+  res.type('application/xml').setHeader('Cache-Control', 'public, max-age=600');
+  res.send(cached.xml);
+});
 
 /** Site languages from the API, refreshed every few minutes. */
 let siteLanguages: { codes: string[]; at: number } = { codes: [], at: 0 };

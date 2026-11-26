@@ -2,12 +2,13 @@ import { HttpClient } from '@angular/common/http';
 import { DOCUMENT, computed, inject, Injectable, REQUEST, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import type { Language, MediaView, MenuLink, SiteData } from './models';
+import { DEFAULT_THEME, normalise, themeCss, type ThemeColors } from './theme';
 
 const MAIN_LANGUAGE = 'en';
 /** Cookie that remembers the visitor's language for pages without a language in their address (e.g. /apply). */
 const LANGUAGE_COOKIE = 'site_lang';
 /** Addresses served by the application itself rather than the CMS: never given a language prefix. */
-const APP_ROUTES = /^\/(admin|api|media|apply|preview|portal|login|assets|timetable|blog)(\/|$|[?#])/;
+const APP_ROUTES = /^\/(admin|api|media|apply|preview|portal|login|assets|timetable|blog|gallery|staff|downloads)(\/|$|[?#])/;
 
 /**
  * Site-wide content edited in the admin: settings, interface text and menus, in the visitor's language.
@@ -56,6 +57,31 @@ export class SiteStore {
     root.lang = data.locale;
     root.dir = data.languages.find((l) => l.code === data.locale)?.dir ?? 'ltr';
     this.applyFavicon();
+    this.applyTheme();
+  }
+
+  /** The colours chosen in Admin → Site colours, as the site's colour variables (none for the original colours). */
+  readonly theme = computed(() => normalise(this.setting<ThemeColors>('theme.colors') ?? DEFAULT_THEME));
+
+  /**
+   * Writes the chosen colours into the page head, on the server-rendered page too, so the site never
+   * shows the original colours first.
+   */
+  applyTheme(colors: ThemeColors = this.theme()) {
+    const head = this.document.head;
+    if (!head) return;
+    const css = themeCss(colors);
+    let style = head.querySelector<HTMLStyleElement>('style#site-theme');
+    if (css) {
+      if (!style) {
+        style = this.document.createElement('style');
+        style.id = 'site-theme';
+        head.appendChild(style);
+      }
+      if (style.textContent !== css) style.textContent = css;
+    } else style?.remove();
+    // Colours the phone's browser bar.
+    head.querySelector('meta[name="theme-color"]')?.setAttribute('content', normalise(colors).primary);
   }
 
   /**

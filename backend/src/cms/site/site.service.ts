@@ -13,6 +13,12 @@ import {
   type Repository,
 } from 'typeorm';
 import { z } from 'zod';
+import {
+  DEFAULT_THEME,
+  parseTheme,
+  THEME_KEY,
+  type ThemeColors,
+} from './theme.js';
 import { safeHref } from '../blocks/block-schemas.js';
 import { withDeadlockRetry } from '../../database/retry.js';
 import { ContentCacheService } from '../content-cache.service.js';
@@ -31,9 +37,19 @@ import {
 /**
  * Setting groups kept off the Site settings page and out of the public payload: languages have their
  * own page, "security" (e.g. whether staff need a sign-in link) is managed under Staff sign-in links, and
- * "maintenance" under Maintenance mode, and "messaging" (SMS and email settings) under SMS & email.
+ * "maintenance" under Maintenance mode, "messaging" (SMS and email settings) under SMS & email, and
+ * "showcase" (the Gallery and Our people page headings) on those two admin screens.
  */
-const PRIVATE_GROUPS = ['languages', 'security', 'maintenance', 'messaging'];
+const PRIVATE_GROUPS = [
+  'languages',
+  'security',
+  'maintenance',
+  'messaging',
+  'showcase',
+];
+
+/** Public (the website needs them) but edited on their own admin screen, not on Site settings: "theme" = Site colours. */
+const OWN_SCREEN_GROUPS = [...PRIVATE_GROUPS, 'theme'];
 
 export interface MenuItemInput {
   label: string;
@@ -175,7 +191,7 @@ export class SiteService {
   /** Settings edited on the Site settings page. Language settings have their own page. */
   async adminSettings() {
     return this.settings.find({
-      where: { groupName: Not(In(PRIVATE_GROUPS)) },
+      where: { groupName: Not(In(OWN_SCREEN_GROUPS)) },
       order: { groupName: 'ASC', key: 'ASC' },
     });
   }
@@ -201,7 +217,7 @@ export class SiteService {
   /** Updates one setting. The new value must have the same shape as the seeded one. */
   async saveSetting(key: string, value: unknown, userId: number) {
     const existing = await this.settings.findOneBy({ key });
-    if (!existing || PRIVATE_GROUPS.includes(existing.groupName))
+    if (!existing || OWN_SCREEN_GROUPS.includes(existing.groupName))
       throw new NotFoundException('Unknown setting.');
     const expected = this.shapeOf(existing.value);
     if (
@@ -335,6 +351,34 @@ export class SiteService {
   }
 
   // ---------- Public site payload ----------
+
+  /** The site colours (Admin → Site colours). */
+  async theme(): Promise<ThemeColors> {
+    const row = await this.settings.findOneBy({ key: THEME_KEY });
+    try {
+      return parseTheme(row?.value ?? DEFAULT_THEME);
+    } catch {
+      return DEFAULT_THEME;
+    }
+  }
+
+  async saveTheme(input: unknown, userId: number): Promise<ThemeColors> {
+    const theme = parseTheme(input);
+    await this.settings.upsert(
+      {
+        key: THEME_KEY,
+        groupName: 'theme',
+        value: theme,
+        description:
+          'Site colours: main, buttons & links, highlight, footer (edited under Site colours)',
+        updatedBy: { id: userId },
+      },
+      ['key'],
+    );
+    // Every cached page carries the colours in its head.
+    this.cache.invalidate();
+    return theme;
+  }
 
   /** Everything the header and footer need, in one cached call, in the visitor's language. */
   async publicSite(requested: string) {

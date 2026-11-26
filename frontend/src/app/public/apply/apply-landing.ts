@@ -1,8 +1,8 @@
 import { DatePipe, isPlatformBrowser } from '@angular/common';
-import { Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, Injector, PLATFORM_ID, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Meta, Title } from '@angular/platform-browser';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { errorMessage } from '../../core/api-url.interceptor';
 import { ApplicantApi, formatMoney, type AdmissionsOptions, type FeeInfo } from '../../core/admissions';
 import { AuthStore } from '../../core/auth';
@@ -20,9 +20,13 @@ export class ApplyLanding {
   private readonly api = inject(ApplicantApi);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
+  private readonly injector = inject(Injector);
 
   protected readonly options = signal<AdmissionsOptions | null>(null);
-  protected readonly mode = signal<'register' | 'signin'>('register');
+  protected readonly mode = signal<'register' | 'signin' | 'forgot'>('register');
+  /** A confirmation shown above the form (reset link sent, password changed). */
+  protected readonly notice = signal('');
+  private readonly forgotEmail = viewChild<ElementRef<HTMLInputElement>>('forgotEmail');
   protected readonly busy = signal(false);
   protected readonly error = signal('');
   protected readonly fee = computed(() => this.options()?.settings['admissions.fee'] as FeeInfo | undefined);
@@ -59,6 +63,11 @@ export class ApplyLanding {
       const text = (o.settings['admissions.welcome'] as string) || 'Apply for admission online.';
       meta.updateTag({ name: 'description', content: text });
     }).catch(() => this.options.set({ programmes: [], intakes: [], documentTypes: [], settings: {} }));
+    // Back from /apply/reset-password: open the sign-in tab with a confirmation.
+    if (inject(ActivatedRoute).snapshot.queryParamMap.get('reset') === 'done') {
+      this.mode.set('signin');
+      this.notice.set('Your password has been changed. Sign in with your new password.');
+    }
     if (isPlatformBrowser(inject(PLATFORM_ID))) {
       void this.auth.refresh().then((me) => {
         if (me && this.auth.can('applications.apply')) void this.router.navigateByUrl('/apply/application');
@@ -66,9 +75,44 @@ export class ApplyLanding {
     }
   }
 
+  protected showForgot() {
+    this.mode.set('forgot');
+    this.error.set('');
+    this.notice.set('');
+    this.password = '';
+    afterNextRender(() => this.forgotEmail()?.nativeElement.focus(), { injector: this.injector });
+  }
+
+  protected showSignIn() {
+    this.mode.set('signin');
+    this.error.set('');
+  }
+
+  /** The reply is the same whether or not the email has an account, so the form cannot be used to find out who has applied. */
+  async sendResetLink() {
+    const email = this.email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.error.set('Enter the email address you registered with.');
+      return;
+    }
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      await this.auth.ensureCsrf();
+      const { message } = await this.api.requestPasswordReset(email);
+      this.mode.set('signin');
+      this.notice.set(message);
+    } catch (err) {
+      this.error.set(errorMessage(err));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
   async submit() {
     this.busy.set(true);
     this.error.set('');
+    this.notice.set('');
     try {
       await this.auth.ensureCsrf();
       if (this.mode() === 'register') {

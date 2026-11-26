@@ -49,11 +49,27 @@
     <div class="auth-card">
       <div class="auth-tabs" role="tablist">
         <button role="tab" type="button" [attr.aria-selected]="mode() === 'register'" (click)="mode.set('register'); error.set('')">Create account</button>
-        <button role="tab" type="button" [attr.aria-selected]="mode() === 'signin'" (click)="mode.set('signin'); error.set('')">Sign in</button>
+        <button role="tab" type="button" [attr.aria-selected]="mode() !== 'register'" (click)="mode.set('signin'); error.set('')">Sign in</button>
       </div>
       @if (error()) {
         <p class="form-error" role="alert">{{ error() }}</p>
       }
+      @if (notice()) {
+        <p class="form-success" role="status">{{ notice() }}</p>
+      }
+      @if (mode() === 'forgot') {
+        <form class="form-stack" (ngSubmit)="sendResetLink()">
+          <div>
+            <h2 class="forgot-title">Forgot your password?</h2>
+            <p class="muted forgot-text">Enter the email you used to create your account. We will email you a link to choose a new password.</p>
+          </div>
+          <label class="field"><span>Email</span><input #forgotEmail name="resetEmail" type="email" autocomplete="email" required [(ngModel)]="email" /></label>
+          <button class="btn btn--accent btn--lg" type="submit" [disabled]="busy()">
+            {{ busy() ? 'Please wait…' : 'Email me a reset link' }}
+          </button>
+          <button class="link-btn" type="button" (click)="showSignIn()">← Back to sign in</button>
+        </form>
+      } @else {
       <form class="form-stack" (ngSubmit)="submit()">
         @if (mode() === 'register') {
           <label class="field"><span>Full name</span><input name="fullName" autocomplete="name" required [(ngModel)]="fullName" /></label>
@@ -69,6 +85,9 @@
             <small class="muted">At least 12 characters. A short sentence works well.</small>
           }
         </label>
+        @if (mode() === 'signin') {
+          <button class="link-btn forgot-link" type="button" (click)="showForgot()">Forgot your password?</button>
+        }
         @if (mode() === 'register') {
           <label class="consent">
             <input type="checkbox" name="acceptTerms" required [(ngModel)]="acceptTerms" />
@@ -83,6 +102,7 @@
           {{ busy() ? 'Please wait…' : mode() === 'register' ? 'Create account and start' : 'Sign in and continue' }}
         </button>
       </form>
+      }
     </div>
   </div>
 </section>

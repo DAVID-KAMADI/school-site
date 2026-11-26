@@ -183,6 +183,12 @@ export class ApplicantApi {
   declineOffer = () => firstValueFrom(this.http.post<ApplicantApplication>(`${this.base}/application/offer/decline`, {}));
   offerLetterUrl = () => `${this.base}/application/offer-letter.pdf`;
   startNew = () => firstValueFrom(this.http.post<ApplicantApplication>(`${this.base}/application/new`, {}));
+
+  // "Forgot your password": the reset link is tied to one account by its token alone.
+  private readonly resetBase = '/api/v1/auth/password-reset';
+  requestPasswordReset = (email: string) => firstValueFrom(this.http.post<{ message: string }>(`${this.resetBase}/request`, { email }));
+  checkResetLink = (token: string) => firstValueFrom(this.http.post<{ valid: boolean; email?: string }>(`${this.resetBase}/check`, { token }));
+  resetPassword = (token: string, password: string) => firstValueFrom(this.http.post<{ ok: true }>(`${this.resetBase}/reset`, { token, password }));
 }
 
 export function formatMoney(fee: Pick<FeeInfo, 'amount' | 'currency'> | null | undefined): string {
