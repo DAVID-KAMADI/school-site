@@ -9,6 +9,7 @@ import {
   ApplicantApi, COUNTIES, FEE_LABELS, FUNDING_LABELS, GENDER_LABELS, ID_TYPE_LABELS, KCSE_GRADES, KCSE_SUBJECTS, LEVEL_LABELS,
   OTHER_COUNTRIES, RCMRD_MEMBER_STATES, STATUS_LABELS, STUDY_MODE_LABELS, formatMoney, type AdmissionsOptions, type ApplicantApplication, type ProgrammeOption,
 } from '../../core/admissions';
+import { Analytics } from '../../core/analytics';
 import { AuthStore } from '../../core/auth';
 import { SiteStore } from '../../core/site';
 
@@ -41,6 +42,7 @@ export class ApplicantPortal {
   protected readonly site = inject(SiteStore);
   protected readonly auth = inject(AuthStore);
   private readonly api = inject(ApplicantApi);
+  private readonly analytics = inject(Analytics);
   private readonly router = inject(Router);
 
   protected readonly steps = STEPS;
@@ -316,7 +318,9 @@ export class ApplicantPortal {
     this.error.set('');
     this.issues.set([]);
     try {
+      const resubmitted = this.editingSubmitted();
       const app = await this.api.submit();
+      this.analytics.track('application_submitted', 'apply', resubmitted ? 'Resubmitted after changes' : (app.programme?.name ?? null));
       this.editingSubmitted.set(false);
       this.apply(app);
       this.notice.set(this.site.t('apply.submitted_title', 'Application received'));

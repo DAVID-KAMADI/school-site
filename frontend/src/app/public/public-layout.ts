@@ -6,6 +6,7 @@ import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from 
 import { filter, firstValueFrom } from 'rxjs';
 import type { MediaView, MenuLink } from '../core/models';
 import { SiteStore } from '../core/site';
+import { Analytics } from '../core/analytics';
 import { CmsLink } from '../shared/cms-link';
 import { motionAllowed } from '../shared/motion';
 import { MediaImage } from '../shared/media-image';
@@ -143,6 +144,8 @@ export class PublicLayout {
   );
 
   constructor() {
+    // Web analytics (Admin → Web analytics): browser only, never blocks the page.
+    inject(Analytics).start();
     const router = inject(Router);
     const route = inject(ActivatedRoute);
     this.bare.set(isNotFoundRoute(route.snapshot, this.site) || isUnavailableRoute(route.snapshot));

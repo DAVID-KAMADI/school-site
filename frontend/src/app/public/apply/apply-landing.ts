@@ -5,6 +5,7 @@ import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { errorMessage } from '../../core/api-url.interceptor';
 import { ApplicantApi, formatMoney, type AdmissionsOptions, type FeeInfo } from '../../core/admissions';
+import { Analytics } from '../../core/analytics';
 import { AuthStore } from '../../core/auth';
 import { SiteStore } from '../../core/site';
 
@@ -18,6 +19,7 @@ import { SiteStore } from '../../core/site';
 export class ApplyLanding {
   protected readonly site = inject(SiteStore);
   private readonly api = inject(ApplicantApi);
+  private readonly analytics = inject(Analytics);
   private readonly auth = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
@@ -121,6 +123,7 @@ export class ApplyLanding {
           return;
         }
         await this.api.register({ fullName: this.fullName.trim(), email: this.email.trim(), phone: this.phone.trim(), password: this.password, acceptTerms: true });
+        this.analytics.track('sign_up', 'apply', 'Applicant account');
         await this.auth.refresh();
       } else {
         await this.auth.login(this.email.trim(), this.password);

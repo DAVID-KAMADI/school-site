@@ -9,6 +9,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AccountRecoveryModule } from './account-recovery/account-recovery.module.js';
+import { AnalyticsModule } from './analytics/analytics.module.js';
 import { AdmissionsModule } from './admissions/admissions.module.js';
 import { AuditModule } from './audit/audit.module.js';
 import { BackupModule } from './backup/backup.module.js';
@@ -54,6 +55,7 @@ import { SitemapModule } from './sitemap/sitemap.module.js';
     MessagingModule,
     AccountRecoveryModule,
     SitemapModule,
+    AnalyticsModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -29,6 +29,12 @@ import { GalleryList } from './gallery/gallery-list';
 import { StaffAdmin } from './staff/staff-admin';
 import { DownloadsAdmin } from './downloads/downloads-admin';
 import { AdminRoot } from './admin-root';
+import { AnalyticsShell } from './analytics/analytics-shell';
+import { AnalyticsOverview } from './analytics/overview';
+import { AnalyticsRealtime } from './analytics/realtime';
+import { AnalyticsAcquisition, AnalyticsDevices, AnalyticsGeography, AnalyticsPages } from './analytics/breakdowns';
+import { AnalyticsEvents } from './analytics/events';
+import { AnalyticsSettings } from './analytics/settings';
 import { AdminLogin } from './login';
 import { MediaLibrary } from './media/media-library';
 import { PageEditor, unsavedChangesGuard } from './pages/page-editor';
@@ -71,6 +77,21 @@ export const adminRoutes: Routes = [
         children: [
           { path: '', pathMatch: 'full', component: Dashboard },
           { path: 'dashboard', pathMatch: 'full', redirectTo: '' },
+          {
+            path: 'analytics',
+            component: AnalyticsShell,
+            ...only('analytics.view'),
+            children: [
+              { path: '', component: AnalyticsOverview },
+              { path: 'realtime', component: AnalyticsRealtime },
+              { path: 'acquisition', component: AnalyticsAcquisition },
+              { path: 'geography', component: AnalyticsGeography },
+              { path: 'pages', component: AnalyticsPages },
+              { path: 'devices', component: AnalyticsDevices },
+              { path: 'events', component: AnalyticsEvents },
+              { path: 'settings', component: AnalyticsSettings, ...only('analytics.manage') },
+            ],
+          },
           { path: 'pages', component: PagesList, ...only(...CONTENT_PERMISSIONS) },
           { path: 'pages/:id', component: PageEditor, canDeactivate: [unsavedChangesGuard], ...only(...CONTENT_PERMISSIONS) },
           { path: 'blog', component: BlogList, ...only(...CONTENT_PERMISSIONS) },

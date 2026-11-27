@@ -46,6 +46,7 @@ const PRIVATE_GROUPS = [
   'maintenance',
   'messaging',
   'showcase',
+  'analytics',
 ];
 
 /** Public (the website needs them) but edited on their own admin screen, not on Site settings: "theme" = Site colours. */

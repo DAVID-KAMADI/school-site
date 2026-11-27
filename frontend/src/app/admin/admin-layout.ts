@@ -21,7 +21,10 @@ interface NavItem {
 const NAV: { heading: string; items: NavItem[] }[] = [
   {
     heading: '',
-    items: [{ label: 'Dashboard', path: '/admin', permission: 'admin.access', icon: 'dashboard', exact: true }],
+    items: [
+      { label: 'Dashboard', path: '/admin', permission: 'admin.access', icon: 'dashboard', exact: true },
+      { label: 'Web analytics', path: '/admin/analytics', permission: 'analytics.view', icon: 'chart' },
+    ],
   },
   {
     heading: 'Content',
