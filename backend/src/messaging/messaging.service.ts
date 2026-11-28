@@ -187,6 +187,9 @@ export class MessagingService {
     let result: SendResult;
     if (!emailReady(settings)) result = fail('Email is not set up yet: add the mail server details under SMS & email.');
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) result = fail(`"${to}" is not an email address.`);
+    // Test/sample accounts (e.g. load-test data): never hand these to the real mail server.
+    else if (/@(?:[^@]+\.)?(?:example\.(?:com|net|org)|[^@]+\.(?:invalid|test|example|localhost))$/i.test(to))
+      result = fail(`Not sent: "${to}" is a test address that cannot receive email.`);
     else result = await sendEmail(settings, to, subject, text);
     await this.record('email', to, subject, meta.loggedText ?? text, result, meta);
     return { ...result, recipient: to };

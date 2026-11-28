@@ -150,6 +150,12 @@ const STAGES: { key: FollowUpStage; label: string; help: string }[] = [
         <button class="a-btn" type="submit">Search</button>
       </form>
 
+      <ol class="steps a-small">
+        <li><strong>1.</strong> Tick the people to contact (the top box ticks everyone in the list).</li>
+        <li><strong>2.</strong> <a href="#compose" (click)="goToCompose($event)">Write the message</a>, or pick a ready-made one.</li>
+        <li><strong>3.</strong> Click <em>Preview</em>, then <em>Send</em>.</li>
+      </ol>
+
       @if (total() > people().length) {
         <p class="a-small a-muted">Showing the {{ people().length }} most recently active of {{ total() }}. Use the filters to narrow the list.</p>
       }
@@ -204,7 +210,17 @@ const STAGES: { key: FollowUpStage; label: string; help: string }[] = [
       </section>
 
       <!-- Compose -->
-      <section class="a-panel a-stack compose">
+      @if (chosen().size) {
+        <div class="sticky-bar" role="region" aria-label="Chosen people">
+          <span><strong>{{ chosen().size }}</strong> {{ chosen().size === 1 ? 'person' : 'people' }} chosen</span>
+          <span class="a-row">
+            <button type="button" class="a-btn a-btn--sm" (click)="chooseAll(false)">Clear</button>
+            <button type="button" class="a-btn a-btn--primary a-btn--sm" (click)="goToCompose()">Write message ↓</button>
+          </span>
+        </div>
+      }
+
+      <section class="a-panel a-stack compose" id="compose" tabindex="-1">
         <h2>Message {{ chosen().size ? 'for ' + chosen().size + (chosen().size === 1 ? ' person' : ' people') : '' }}</h2>
         <div class="a-row">
           <span class="a-label">Ready-made:</span>
@@ -309,7 +325,15 @@ const STAGES: { key: FollowUpStage; label: string; help: string }[] = [
     .bar span { display: block; height: 100%; background: var(--a-primary); }
     .bad { background: var(--a-danger-soft, #fde8e8); color: var(--a-danger, #b42318); }
     .msg { max-width: 32rem; }
-    .compose { margin-top: 1rem; }
+    .compose { margin-top: 1rem; scroll-margin-top: 1rem; }
+    .compose:focus { outline: none; }
+    .steps { list-style: none; display: flex; flex-wrap: wrap; gap: 0.4rem 1.25rem; padding: 0; margin: 0 0 0.75rem; }
+    .sticky-bar {
+      position: sticky; bottom: 0.75rem; z-index: 5; margin-top: 0.75rem;
+      display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; align-items: center; justify-content: space-between;
+      padding: 0.6rem 0.9rem; border-radius: var(--a-radius); background: #fff;
+      border: 1px solid var(--a-primary); box-shadow: 0 6px 20px rgba(16, 24, 40, 0.15);
+    }
     .compose h2 { margin: 0; font-size: 1.1rem; }
     .preview { border: 1px dashed var(--a-line); border-radius: var(--a-radius); padding: 1rem; background: #fafbfc; }
     .preview h3 { margin: 0 0 0.5rem; font-size: 0.95rem; }
@@ -472,6 +496,13 @@ export class FollowUps {
       this.busy.set(false);
       this.confirming.set(false);
     }
+  }
+
+  protected goToCompose(e?: Event) {
+    e?.preventDefault();
+    const el = document.getElementById('compose');
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el?.focus({ preventScroll: true });
   }
 
   protected what() {
